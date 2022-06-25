@@ -44,6 +44,8 @@ MOVEDOWNFREQ = 0.15
 FALLING_SPEED = 0.8
 LED_BRIGHTNESS = 0.6
 
+INSTALL_DIR = '/home/ben/Documents'
+
 #               R    G    B
 WHITE       = (255, 255, 255)
 GRAY        = (185, 185, 185)
@@ -221,7 +223,7 @@ theTetrisFont = [
 
 if PI:
     serial = spi(port=0, device=0, gpio=noop())
-    device = max7219(serial, cascaded=4, blocks_arranged_in_reverse_order=True)
+    device = max7219(serial, cascaded=4, blocks_arranged_in_reverse_order=False)
     pixel_pin = board.D18
     # The number of NeoPixels
     num_pixels = PIXEL_X*PIXEL_Y
@@ -234,13 +236,13 @@ QKEYDOWN=0
 QKEYUP=1
 
 JKEY_X=3
-JKEY_Y=4
-JKEY_A=0
-JKEY_B=1
-JKEY_R=7
-JKEY_L=6
-JKEY_SEL=10
-JKEY_START=11
+JKEY_Y=2
+JKEY_A=1
+JKEY_B=0
+JKEY_R=10
+JKEY_L=9
+JKEY_SEL=4
+JKEY_START=6
 
 mykeys =	{
   K_1: JKEY_A,
@@ -258,7 +260,7 @@ mask = bytearray([1,2,4,8,16,32,64,128])
 def main():
 
     global FPSCLOCK, DISPLAYSURF, BASICFONT, BIGFONT
-    global a1_counter ,RUNNING
+    global a1_counter, RUNNING
     a1_counter=0
     RUNNING=True
     joystick_detected=False
@@ -278,7 +280,7 @@ def main():
     else:
         device.contrast(200)
         pygame.init()
-        drawImage('/home/pi/pi.bmp')
+        drawImage(f'{INSTALL_DIR}/pi.bmp')
         pygame.joystick.init()
         while joystick_detected==False:
             show_message(device,"Waiting for controller...",fill="white", font=proportional(CP437_FONT), scroll_delay=0.01)
@@ -304,7 +306,7 @@ def main():
         clearScreen()
         #drawSymbols()
         if PI:
-            drawImage('/home/pi/select.bmp')
+            drawImage(f'{INSTALL_DIR}/select.bmp')
         else: 
             drawImage('select.bmp')
         updateScreen()
@@ -348,7 +350,7 @@ def main():
                    runTetrisGame()
                 if (myevent == JKEY_Y):
                   runSnakeGame() 
-                if (myevent == JKEY_START):
+                if (myevent == JKEY_SEL):
                   shutdownScreen()
                   
             if event.type == pygame.QUIT: # get all the QUIT events
@@ -566,9 +568,9 @@ def runSnakeGame():
     direction = RIGHT
     score = 0
     
-    if os.path.isfile('/home/pi/hs_snake.p')==True:  
+    if os.path.isfile(f'{INSTALL_DIR}/hs_snake.p')==True:  
         try:
-           highscore = pickle.load(open("/home/pi/hs_snake.p","rb"))
+           highscore = pickle.load(open(f"{INSTALL_DIR}/hs_snake.p","rb"))
         except EOFError:
            highscore = 0
     else:
@@ -628,7 +630,7 @@ def runSnakeGame():
             if score > highscore:
                 highscore = score
                 if PI:
-                    pickle.dump(highscore, open("/home/pi/hs_snake.p", "wb"))
+                    pickle.dump(highscore, open(f"{INSTALL_DIR}/hs_snake.p", "wb"))
                     show_message(device,"New Highscore !!!",fill="white", font=proportional(CP437_FONT), scroll_delay=0.01)
             return # game over
         for wormBody in wormCoords[1:]:
@@ -637,7 +639,7 @@ def runSnakeGame():
                 if score > highscore:
                     highscore = score
                     if PI:
-                        pickle.dump(highscore, open("/home/pi/hs_snake.p", "wb"))
+                        pickle.dump(highscore, open(f"{INSTALL_DIR}/hs_snake.p", "wb"))
                         show_message(device,"New Highscore !!!",fill="white", font=proportional(CP437_FONT), scroll_delay=0.01)
                 return # game over
 
@@ -698,9 +700,9 @@ def runTetrisGame():
     oldpiece = 10
     lines = 0
     level, fallFreq = calculateLevelAndFallFreq(lines)
-    if os.path.isfile('/home/pi/hs_tetris.p')==True:  
+    if os.path.isfile(f'{INSTALL_DIR}/hs_tetris.p')==True:  
         try:
-           highscore = pickle.load(open("/home/pi/hs_tetris.p","rb"))
+           highscore = pickle.load(open(f"{INSTALL_DIR}/hs_tetris.p","rb"))
         except EOFError:
            highscore = 0
     else:
@@ -727,7 +729,7 @@ def runTetrisGame():
                 if score > highscore:
                     highscore = score
                     if PI:
-                        pickle.dump(highscore, open("/home/pi/hs_tetris.p", "wb"))
+                        pickle.dump(highscore, open(f"{INSTALL_DIR}/hs_tetris.p", "wb"))
                         show_message(device,"New Highscore !!!",fill="white", font=proportional(CP437_FONT), scroll_delay=0.01)
                 
                 return # can't fit a new piece on the board, so game over
@@ -911,12 +913,13 @@ def drawClock(color):
                     else:
                         myevent = -1
                 # print("Joystick button pressed: {}".format(event.button))
-                if (myevent==JKEY_X):
+                if (myevent==JKEY_START):
                   # print("exiting clock")
                   clearScreen()
                   updateScreen()
                   return
-                if (myevent == JKEY_A):
+                if (myevent == JKEY_A or myevent == JKEY_B 
+                    or myevent == JKEY_X or myevent == JKEY_Y):
                   color = color + 1
                   if (color > (len(COLORS) - 1)):
                     color = 0
@@ -962,7 +965,7 @@ def shutdownScreen():
     if PI:
         device.clear();
         device.show();
-        drawImage('/home/pi/shutdown.bmp')
+        drawImage(f'{INSTALL_DIR}/shutdown.bmp')
         show_message(device,"Press Select to shutdown!",fill="white", font=proportional(CP437_FONT), scroll_delay=0.01)
     else:
         drawImage('shutdown.bmp')
