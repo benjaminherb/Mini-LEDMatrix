@@ -28,10 +28,10 @@ if PI:
     from luma.core.legacy.font import proportional, CP437_FONT, TINY_FONT, SINCLAIR_FONT, LCD_FONT
 
 # only modify this two values for size adaption!
-PIXEL_X=10
-PIXEL_Y=20
+PIXEL_X = 10
+PIXEL_Y = 20
 
-SIZE= 20
+SIZE = 20
 FPS = 15
 BOXSIZE = 20
 WINDOWWIDTH = BOXSIZE * PIXEL_X
@@ -62,13 +62,13 @@ CYAN        = (  0, 255, 255)
 MAGENTA     = (255,   0, 255)
 ORANGE      = (255, 100,   0)
 
-SCORES =(0,40,100,300,1200)
+SCORES = (0, 40, 100, 300, 1200)
 
 BORDERCOLOR = BLUE
 BGCOLOR = BLACK
 TEXTCOLOR = WHITE
 TEXTSHADOWCOLOR = GRAY
-COLORS      = (BLUE,GREEN,RED,YELLOW,CYAN,MAGENTA,ORANGE)
+COLORS      = (BLUE, GREEN, RED, YELLOW, CYAN, MAGENTA, ORANGE)
 LIGHTCOLORS = (LIGHTBLUE, LIGHTGREEN, LIGHTRED, LIGHTYELLOW)
 #assert len(COLORS) == len(LIGHTCOLORS) # each color must have light color
 
@@ -187,7 +187,7 @@ PIECES = {'S': S_SHAPE_TEMPLATE,
           'O': O_SHAPE_TEMPLATE,
           'T': T_SHAPE_TEMPLATE}
 
-PIECES_ORDER = {'S': 0,'Z': 1,'I': 2,'J': 3,'L': 4,'O': 5,'T': 6}
+PIECES_ORDER = {'S': 0, 'Z': 1, 'I': 2, 'J': 3, 'L': 4, 'O': 5, 'T': 6}
 
 # snake constants #
 UP = 'up'
@@ -195,7 +195,7 @@ DOWN = 'down'
 LEFT = 'left'
 RIGHT = 'right'
 
-HEAD = 0 # syntactic sugar: index of the worm's head
+HEAD = 0  # syntactic sugar: index of the worm's head
 
 # font clock #
 
@@ -212,13 +212,13 @@ clock_font = [
   0x17, 0x15, 0x1F]
 
 theTetrisFont = [
-    0x78,0x78,0x1E,0x1E, #S
-    0x1E,0x1E,0x78,0x78, #Z
-    0x00,0xFF,0xFF,0x00, #I
-    0x06,0x06,0x7E,0x7E, #J
-    0x7E,0x7E,0x06,0x06, #L
-    0x3C,0x3C,0x3C,0x3C, #O
-    0x7E,0x7E,0x18,0x18, #T
+    0x78, 0x78, 0x1E, 0x1E,  # S
+    0x1E, 0x1E, 0x78, 0x78,  # Z
+    0x00, 0xFF, 0xFF, 0x00,  # I
+    0x06, 0x06, 0x7E, 0x7E,  # J
+    0x7E, 0x7E, 0x06, 0x06,  # L
+    0x3C, 0x3C, 0x3C, 0x3C,  # O
+    0x7E, 0x7E, 0x18, 0x18,  # T
 ]
 
 if PI:
@@ -232,19 +232,19 @@ if PI:
 
 # key server for controller #
 
-QKEYDOWN=0
-QKEYUP=1
+QKEYDOWN = 0
+QKEYUP = 1
 
-JKEY_X=3
-JKEY_Y=2
-JKEY_A=1
-JKEY_B=0
-JKEY_R=10
-JKEY_L=9
-JKEY_SEL=4
-JKEY_START=6
+JKEY_X = 3
+JKEY_Y = 2
+JKEY_A = 1
+JKEY_B = 0
+JKEY_R = 10
+JKEY_L = 9
+JKEY_SEL = 4
+JKEY_START = 6
 
-mykeys =	{
+mykeys = {
   K_1: JKEY_A,
   K_2: JKEY_B,
   K_3: JKEY_Y,
@@ -253,18 +253,17 @@ mykeys =	{
   K_s: JKEY_START
 }
 
-mask = bytearray([1,2,4,8,16,32,64,128])
+mask = bytearray([1, 2, 4, 8, 16, 32, 64, 128])
 
-# main #
 
 def main():
 
     global FPSCLOCK, DISPLAYSURF, BASICFONT, BIGFONT
     global a1_counter, RUNNING
-    a1_counter=0
-    RUNNING=True
-    joystick_detected=False
-    joystick_cnt=0
+    a1_counter = 0
+    RUNNING = True
+    joystick_detected = False
+    joystick_cnt = 0
 
     if not PI:
         pygame.init()
@@ -282,54 +281,57 @@ def main():
         pygame.init()
         drawImage(f'{INSTALL_DIR}/pi.bmp')
         pygame.joystick.init()
-        while joystick_detected==False:
-            show_message(device,"Waiting for controller...",fill="white", font=proportional(CP437_FONT), scroll_delay=0.01)
+        while joystick_detected == False:
+            show_message(
+                    device, "Waiting for controller...", fill="white",
+                    font=proportional(CP437_FONT), scroll_delay=0.01)
             pygame.joystick.quit()
             pygame.joystick.init()
             try:
-                joystick = pygame.joystick.Joystick(0) # create a joystick instance
-                joystick.init() # init instance
+                joystick = pygame.joystick.Joystick(0)  # create a joystick instance
+                joystick.init()  # init instance
                 # print("Initialized joystick: {}".format(joystick.get_name()))
                 joystick_detected = True
             except pygame.error:
                 print("no joystick found.")
                 joystick_detected = False
 
-    clearScreen() 
+    clearScreen()
 
     drawClock(1)
     if PI:
-        show_message(device,"Let's play",fill="white", font=proportional(CP437_FONT))
-
+        show_message(
+                device, "Let's play", fill="white",
+                font=proportional(CP437_FONT))
 
     while True:
         clearScreen()
-        #drawSymbols()
+        # drawSymbols()
         if PI:
             drawImage(f'{INSTALL_DIR}/select.bmp')
-        else: 
+        else:
             drawImage('select.bmp')
         updateScreen()
-        
+
         if not PI:
             checkForQuit()
 
-        #check if joystick is still connected
-        if PI:    
-            if joystick_cnt==50:
-                joystick_cnt=0
+        # check if joystick is still connected
+        if PI:
+            if joystick_cnt == 50:
+                joystick_cnt = 0
                 pygame.joystick.quit()
                 pygame.joystick.init()
                 try:
-                    joystick = pygame.joystick.Joystick(0) # create a joystick instance
-                    joystick.init() # init instance
+                    joystick = pygame.joystick.Joystick(0)  # create a joystick instance
+                    joystick.init()  # init instance
                     # print("Initialized joystick: {}".format(joystick.get_name()))
                     joystick_detected = True
                 except pygame.error:
                     print("no joystick found.")
                     joystick_detected = False
             else:
-                joystick_cnt+=1
+                joystick_cnt += 1
 
         pygame.event.pump()
         for event in pygame.event.get():
@@ -343,23 +345,23 @@ def main():
                     else:
                         myevent = -1
                 if (myevent == JKEY_B):
-                  drawClock(1)
+                    drawClock(1)
                 if (myevent == JKEY_A):
-                  runPongGame()
+                    runPongGame()
                 if (myevent == JKEY_X):
-                   runTetrisGame()
+                    runTetrisGame()
                 if (myevent == JKEY_Y):
-                  runSnakeGame() 
+                    runSnakeGame()
                 if (myevent == JKEY_SEL):
-                  shutdownScreen()
-                  
-            if event.type == pygame.QUIT: # get all the QUIT events
-                terminate() # terminate if any QUIT events are present
+                    shutdownScreen()
+
+            if event.type == pygame.QUIT:  # get all the QUIT events
+                terminate()  # terminate if any QUIT events are present
 
         time.sleep(.1)
-        
 
     terminate()
+
 
 # gaming main routines #
 
@@ -380,12 +382,12 @@ def runPongGame():
     movingLeftUpper = False
     movingRightLower = False
     movingLeftLower = False
-    restart=False
+    restart = False
     lastLowerMoveSidewaysTime = time.time()
     lastUpperMoveSidewaysTime = time.time()
 
-    while True: # main game loop
-        
+    while True:  # main game loop
+
         pygame.event.pump()
         for event in pygame.event.get():
             if event.type == pygame.JOYAXISMOTION:
@@ -400,7 +402,7 @@ def runPongGame():
                 if (val == 0):
                     movingLeftLower = False
                     movingRightLower = False
-        
+
             if event.type == pygame.JOYBUTTONDOWN:
                 # print("Joystick button pressed: {}".format(event.button))
                 if (event.button == JKEY_A):
@@ -414,23 +416,23 @@ def runPongGame():
                     return
 
             if event.type == pygame.JOYBUTTONUP:
-                    movingLeftUpper = False
-                    movingRightUpper = False
-            
+                movingLeftUpper = False
+                movingRightUpper = False
+
             if event.type == pygame.KEYDOWN:
-                if(event.key==K_LEFT):
+                if(event.key == K_LEFT):
                     movingLeftLower = True
                     movingRightLower = False
-                if(event.key==K_RIGHT):
+                if(event.key == K_RIGHT):
                     movingLeftLower = False
                     movingRightLower = True
-                if(event.key==K_1):
+                if(event.key == K_1):
                     movingLeftUpper = True
                     movingRightUpper = False
-                if(event.key==K_2):
+                if(event.key == K_2):
                     movingLeftUpper = False
                     movingRightUpper = True
-                if(event.key==K_s):
+                if(event.key == K_s):
                     return
 
             if event.type == pygame.KEYUP:
@@ -440,105 +442,105 @@ def runPongGame():
                 movingRightUpper = False
 
         if (movingLeftLower) and time.time() - lastLowerMoveSidewaysTime > MOVESIDEWAYSFREQ:
-            if lowerbarx >1:
-                lowerbarx-=1;
+            if lowerbarx > 1:
+                lowerbarx -= 1
             lastLowerMoveSidewaysTime = time.time()
         if (movingRightLower) and time.time() - lastLowerMoveSidewaysTime > MOVESIDEWAYSFREQ:
-            if lowerbarx <PIXEL_X-2:
-                lowerbarx+=1;
+            if lowerbarx < PIXEL_X-2:
+                lowerbarx += 1
             lastLowerMoveSidewaysTime = time.time()
         if (movingLeftUpper) and time.time() - lastUpperMoveSidewaysTime > MOVESIDEWAYSFREQ:
-            if upperbarx >1:
-                upperbarx-=1;
+            if upperbarx > 1:
+                upperbarx -= 1
             lastUpperMoveSidewaysTime = time.time()
         if (movingRightUpper) and time.time() - lastUpperMoveSidewaysTime > MOVESIDEWAYSFREQ:
-            if upperbarx <PIXEL_X-2:
-                upperbarx+=1;
+            if upperbarx < PIXEL_X-2:
+                upperbarx += 1
             lastUpperMoveSidewaysTime = time.time()
 
         if not PI:
-                checkForQuit()
+            checkForQuit()
 
         if (directiony == up):
-            if (bally>1):
-                bally-=1
+            if (bally > 1):
+                bally -= 1
             else:
-                if (abs(ballx-upperbarx)<2):
+                if (abs(ballx-upperbarx) < 2):
                     directiony = down
-                    if (ballx==upperbarx+1):
-                        if (directionx==left):
-                            directionx=right
-                    if (ballx==upperbarx-1):
-                        if (directionx==right):
-                            directionx=left
-                elif ((ballx-upperbarx==2) and (directionx==left)):
-                    directionx=right
+                    if (ballx == upperbarx+1):
+                        if (directionx == left):
+                            directionx = right
+                    if (ballx == upperbarx-1):
+                        if (directionx == right):
+                            directionx = left
+                elif ((ballx-upperbarx == 2) and (directionx == left)):
+                    directionx = right
                     directiony = down
-                elif ((ballx-upperbarx==-2) and (directionx==right)):
-                    directionx=left
+                elif ((ballx-upperbarx == -2) and (directionx == right)):
+                    directionx = left
                     directiony = down
                 else:
-                    bally-=1
-                    score1+=1
+                    bally -= 1
+                    score1 += 1
                     restart = True
         else:
-            if (bally<PIXEL_Y-2):
-                bally+=1
+            if (bally < PIXEL_Y-2):
+                bally += 1
             else:
-                if (abs(ballx-lowerbarx)<2):
+                if (abs(ballx-lowerbarx) < 2):
                     directiony = up
-                    if (ballx==lowerbarx+1):
-                        if (directionx==left):
-                            directionx=right
-                    if (ballx==lowerbarx-1):
-                        if (directionx==right):
-                            directionx=left
-                elif ((ballx-lowerbarx==2) and (directionx==left)):
-                    directionx=right
+                    if (ballx == lowerbarx+1):
+                        if (directionx == left):
+                            directionx = right
+                    if (ballx == lowerbarx-1):
+                        if (directionx == right):
+                            directionx = left
+                elif ((ballx-lowerbarx == 2) and (directionx == left)):
+                    directionx = right
                     directiony = up
-                elif ((ballx-lowerbarx==-2) and (directionx==right)):
-                    directionx=left
+                elif ((ballx-lowerbarx == -2) and (directionx == right)):
+                    directionx = left
                     directiony = up
                 else:
-                    bally+=1
-                    score2+=1
+                    bally += 1
+                    score2 += 1
                     restart = True
 
         if (directionx == left):
-            if (ballx>0):
-                if (ballx==1):
-                   ballx-=1
+            if (ballx > 0):
+                if (ballx == 1):
+                    ballx -= 1
                 else:
-                    ballx-=random.randint(1,2)
+                    ballx -= random.randint(1, 2)
             else:
                 directionx = right
-                ballx+=1
+                ballx += 1
                 if(directiony == up):
-                    if(bally>2):
-                        bally-=1
+                    if(bally > 2):
+                        bally -= 1
                 if(directiony == down):
-                    if(bally<PIXEL_Y-2):
-                        bally+=1
+                    if(bally < PIXEL_Y-2):
+                        bally += 1
         else:
-            if (ballx<PIXEL_X-1):
-                if (ballx==8):
-                   ballx+=1
+            if (ballx < PIXEL_X-1):
+                if (ballx == 8):
+                    ballx += 1
                 else:
-                    ballx+=random.randint(1,2)
+                    ballx += random.randint(1, 2)
             else:
                 directionx = left
-                ballx-=random.randint(1,2)
+                ballx -= random.randint(1, 2)
                 if(directiony == up):
-                    if(bally>3):
-                        bally-=random.randint(0,2)
+                    if(bally > 3):
+                        bally -= random.randint(0, 2)
                 if(directiony == down):
-                    if(bally<PIXEL_Y-3):
-                        bally+=random.randint(0,2)
+                    if(bally < PIXEL_Y-3):
+                        bally += random.randint(0, 2)
         clearScreen()
-        drawBall(ballx,bally)
-        drawBar(upperbarx,0)
-        drawBar(lowerbarx,PIXEL_Y-1)
-        twoscoreText(score1,score2)
+        drawBall(ballx, bally)
+        drawBar(upperbarx, 0)
+        drawBar(lowerbarx, PIXEL_Y-1)
+        twoscoreText(score1, score2)
         updateScreen()
 
         if (score1 == 9) or (score2 == 9):
@@ -547,46 +549,49 @@ def runPongGame():
 
         if restart:
             time.sleep(1)
-            ballx=PIXEL_X//2
-            bally=PIXEL_Y//2
-            if directiony==down:
+            ballx = PIXEL_X//2
+            bally = PIXEL_Y//2
+            if directiony == down:
                 directiony = up
             else:
                 directiony = down
-            restart=False
+            restart = False
         else:
             time.sleep(.1)
 
+
 def runSnakeGame():
-    
+
     # Set a random start point.
-    startx = random.randint(2, BOARDWIDTH-2 )
-    starty = random.randint(2, BOARDHEIGHT -2 )
+    startx = random.randint(2, BOARDWIDTH - 2)
+    starty = random.randint(2, BOARDHEIGHT - 2)
     wormCoords = [{'x': startx,     'y': starty},
                   {'x': startx - 1, 'y': starty},
                   {'x': startx - 2, 'y': starty}]
     direction = RIGHT
     score = 0
-    
-    if os.path.isfile(f'{INSTALL_DIR}/hs_snake.p')==True:  
+
+    if os.path.isfile(f'{INSTALL_DIR}/hs_snake.p') == True:
         try:
-           highscore = pickle.load(open(f"{INSTALL_DIR}/hs_snake.p","rb"))
+            highscore = pickle.load(open(f"{INSTALL_DIR}/hs_snake.p", "rb"))
         except EOFError:
-           highscore = 0
+            highscore = 0
     else:
-        highscore=0
+        highscore = 0
     if PI:
-        show_message(device,"Snake Highscore: " + str(highscore),fill="white", font=proportional(CP437_FONT), scroll_delay=0.01)
+        show_message(
+                device, "Snake Highscore: " + str(highscore),
+                fill="white", font=proportional(CP437_FONT), scroll_delay=0.01)
 
     # Start the apple in a random place.
     apple = getRandomLocation(wormCoords)
 
-    while True: # main game loop
+    while True:  # main game loop
         olddirection = direction
         pygame.event.pump()
         for event in pygame.event.get():
             if event.type == pygame.JOYAXISMOTION:
-                if (olddirection== direction):   #only one direction change per step
+                if (olddirection== direction):   # only one direction change per step
                     axis = event.axis
                     val = round(event.value)
                     if (axis == 0 and val == -1):
@@ -603,24 +608,24 @@ def runSnakeGame():
                             direction = UP
 
             if event.type == pygame.KEYDOWN:
-                if (event.key==K_LEFT):
+                if (event.key == K_LEFT):
                     if direction != RIGHT:
                         direction = LEFT
-                if (event.key==K_RIGHT):
+                if (event.key == K_RIGHT):
                     if direction != LEFT:
                         direction = RIGHT
-                if (event.key==K_DOWN):
+                if (event.key == K_DOWN):
                     if direction != UP:
                         direction = DOWN
-                if (event.key==K_UP):
+                if (event.key == K_UP):
                     if direction != DOWN:
                         direction = UP
                 if (event.key == JKEY_SEL):
-                    #quit game
+                    # quit game
                     return
-            
+
             if event.type == pygame.JOYBUTTONDOWN:
-                if (event.button==JKEY_SEL):
+                if (event.button == JKEY_SEL):
                     # quit game
                     return
 
@@ -631,8 +636,8 @@ def runSnakeGame():
                 highscore = score
                 if PI:
                     pickle.dump(highscore, open(f"{INSTALL_DIR}/hs_snake.p", "wb"))
-                    show_message(device,"New Highscore !!!",fill="white", font=proportional(CP437_FONT), scroll_delay=0.01)
-            return # game over
+                    show_message(device, "New Highscore !!!", fill="white", font=proportional(CP437_FONT), scroll_delay=0.01)
+            return  # game over
         for wormBody in wormCoords[1:]:
             if wormBody['x'] == wormCoords[HEAD]['x'] and wormBody['y'] == wormCoords[HEAD]['y']:
                 time.sleep(1.5)
@@ -640,31 +645,31 @@ def runSnakeGame():
                     highscore = score
                     if PI:
                         pickle.dump(highscore, open(f"{INSTALL_DIR}/hs_snake.p", "wb"))
-                        show_message(device,"New Highscore !!!",fill="white", font=proportional(CP437_FONT), scroll_delay=0.01)
-                return # game over
+                        show_message(device, "New Highscore !!!", fill="white", font=proportional(CP437_FONT), scroll_delay=0.01)
+                return  # game over
 
         # check if worm has eaten an apple
         if wormCoords[HEAD]['x'] == apple['x'] and wormCoords[HEAD]['y'] == apple['y']:
             # don't remove worm's tail segment
             score += 1
-            apple = getRandomLocation(wormCoords) # set a new apple somewhere
+            apple = getRandomLocation(wormCoords)  # set a new apple somewhere
         else:
-            del wormCoords[-1] # remove worm's tail segment
+            del wormCoords[-1]  # remove worm's tail segment
 
         # move the worm by adding a segment in the direction it is moving
         if direction == UP:
-            if wormCoords[HEAD]['y'] == 0 :
+            if wormCoords[HEAD]['y'] == 0:
                 newHead = {'x': wormCoords[HEAD]['x'], 'y': BOARDHEIGHT-1}
             else:
                 newHead = {'x': wormCoords[HEAD]['x'], 'y': wormCoords[HEAD]['y'] - 1}
         elif direction == DOWN:
-            if wormCoords[HEAD]['y'] == BOARDHEIGHT-1 :
+            if wormCoords[HEAD]['y'] == BOARDHEIGHT-1:
                 newHead = {'x': wormCoords[HEAD]['x'], 'y': 0}
             else:
                 newHead = {'x': wormCoords[HEAD]['x'], 'y': wormCoords[HEAD]['y'] + 1}
         elif direction == LEFT:
-            if wormCoords[HEAD]['x'] == 0 :
-                newHead = {'x': BOARDWIDTH -1, 'y': wormCoords[HEAD]['y'] }
+            if wormCoords[HEAD]['x'] == 0:
+                newHead = {'x': BOARDWIDTH -1, 'y': wormCoords[HEAD]['y']}
             else:
                 newHead = {'x': wormCoords[HEAD]['x'] - 1, 'y': wormCoords[HEAD]['y']}
         elif direction == RIGHT:
@@ -682,6 +687,7 @@ def runSnakeGame():
         updateScreen()
         time.sleep(.15)
 
+
 def runTetrisGame():
     # setup varia
     # bles for the start of the game
@@ -692,7 +698,7 @@ def runTetrisGame():
     lastMoveDownTime = time.time()
     lastMoveSidewaysTime = time.time()
     lastFallTime = time.time()
-    movingDown = False # note: there is no movingUp variable
+    movingDown = False  # note: there is no movingUp variable
     movingLeft = False
     movingRight = False
     score = 0
@@ -700,23 +706,20 @@ def runTetrisGame():
     oldpiece = 10
     lines = 0
     level, fallFreq = calculateLevelAndFallFreq(lines)
-    if os.path.isfile(f'{INSTALL_DIR}/hs_tetris.p')==True:  
+    if os.path.isfile(f'{INSTALL_DIR}/hs_tetris.p') == True:
         try:
-           highscore = pickle.load(open(f"{INSTALL_DIR}/hs_tetris.p","rb"))
+           highscore = pickle.load(open(f"{INSTALL_DIR}/hs_tetris.p", "rb"))
         except EOFError:
-           highscore = 0
+            highscore = 0
     else:
-        highscore=0
+        highscore = 0
     if PI:
-        show_message(device,"Tetris Highscore: " + str(highscore),fill="white", font=proportional(CP437_FONT), scroll_delay=0.01)
-    
+        show_message(device, "Tetris Highscore: " + str(highscore), fill="white", font=proportional(CP437_FONT), scroll_delay=0.01)
 
     fallingPiece = getNewPiece()
     nextPiece = getNewPiece()
 
-
-    while True: # game loop
-
+    while True:  # game loop
 
         if fallingPiece == None:
             # No falling piece in play, so start a new piece at the top
@@ -780,29 +783,29 @@ def runTetrisGame():
                 movingRight = False
                 lastMoveSidewaysTime = time.time()
 
-              if (event.key==K_RIGHT) and isValidPosition(board, fallingPiece, adjX=1):
+              if (event.key == K_RIGHT) and isValidPosition(board, fallingPiece, adjX=1):
                 fallingPiece['x'] += 1
                 movingLeft = False
                 movingRight = True
                 lastMoveSidewaysTime = time.time()
 
-              if (event.key==K_DOWN):
+              if (event.key == K_DOWN):
                 movingDown = True
                 if isValidPosition(board, fallingPiece, adjY=1):
                     fallingPiece['y'] += 1
                 lastMoveDownTime = time.time()
 
-              if (event.key==K_UP):
-                 fallingPiece['rotation'] = (fallingPiece['rotation'] + 1) % len(PIECES[fallingPiece['shape']])
-                 if not isValidPosition(board, fallingPiece):
-                      fallingPiece['rotation'] = (fallingPiece['rotation'] - 1) % len(PIECES[fallingPiece['shape']])
-              
+              if (event.key == K_4):
+                    fallingPiece['rotation'] = (fallingPiece['rotation'] + 1) % len(PIECES[fallingPiece['shape']])
+                    if not isValidPosition(board, fallingPiece):
+                        fallingPiece['rotation'] = (fallingPiece['rotation'] - 1) % len(PIECES[fallingPiece['shape']])
+
               if (event.key == K_3):
                     fallingPiece['rotation'] = (fallingPiece['rotation'] -1) % len(PIECES[fallingPiece['shape']])
                     if not isValidPosition(board, fallingPiece):
                         fallingPiece['rotation'] = (fallingPiece['rotation'] + 1) % len(PIECES[fallingPiece['shape']])
-              
-              if (event.key == K_4):
+
+              if (event.key == K_UP):
                     movingDown = False
                     movingLeft = False
                     movingRight = False
