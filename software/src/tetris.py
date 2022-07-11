@@ -45,6 +45,9 @@ def runTetrisGame():
 
     while True:  # game loop
 
+        # Used to skip processing after a quickdrop and avoid movement
+        quickdrop = False
+
         if not fallingPiece:
             # No falling piece in play, so start a new piece at the top
             fallingPiece = nextPiece
@@ -80,6 +83,8 @@ def runTetrisGame():
                             break
                     score += i
                     fallingPiece['y'] += i - 1
+                    # stop event loop to not move after a quick drop
+                    quickdrop = True
                 elif (event.button == pygame.CONTROLLER_BUTTON_DPAD_LEFT
                         and isValidPosition(board, fallingPiece, adjX=-1)):
                     fallingPiece['x'] -= 1
@@ -113,7 +118,8 @@ def runTetrisGame():
                         return
 
         # let the piece fall if it is time to fall
-        if time.time() - lastFallTime > fallFreq:
+        if quickdrop or time.time() - lastFallTime > fallFreq:
+            quickdrop = False
             # see if the piece has landed
             if not isValidPosition(board, fallingPiece, adjY=1):
                 # falling piece has landed, set it on the board
@@ -165,7 +171,7 @@ def runTetrisGame():
 def calculateLevelAndFallFreq(lines):
     # Based on the score, return the level the player is on and
     # how many seconds pass until a falling piece falls one space.
-    level = int(lines / 4) + 1
+    level = int(lines / 6) + 1
     # limit level to 10
     if level > 10:
         level = 10
