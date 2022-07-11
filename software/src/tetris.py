@@ -2,12 +2,19 @@ import os
 import time
 import pickle
 import pygame
+import random
+from luma.core.render import canvas
 
-import main
-from templates_tetris import PIECES
+from . import main
+from .templates_tetris import PIECES
 from . import INSTALL_DIR, PI
 
 PIECES_ORDER = {'S': 0, 'Z': 1, 'I': 2, 'J': 3, 'L': 4, 'O': 5, 'T': 6}
+SCORES = (0, 40, 100, 300, 1200)
+FALLING_SPEED = 0.8
+
+TEMPLATEWIDTH = 5
+TEMPLATEHEIGHT = 5
 
 
 def runTetrisGame():
@@ -36,15 +43,14 @@ def runTetrisGame():
     else:
         highscore = 0
     if PI:
-        main.show_message(device, "Tetris Highscore: " + str(highscore),
-                     fill="white", font=proportional(CP437_FONT), scroll_delay=0.01)
+        main.scroll_text(f"Tetris Highscore: {str(highscore)}")
 
     fallingPiece = getNewPiece()
     nextPiece = getNewPiece()
 
     while True:  # game loop
 
-        if fallingPiece == None:
+        if not fallingPiece:
             # No falling piece in play, so start a new piece at the top
             fallingPiece = nextPiece
             nextPiece = getNewPiece()
@@ -57,8 +63,7 @@ def runTetrisGame():
                     if PI:
                         pickle.dump(highscore, open(
                             f"{INSTALL_DIR}/hs_tetris.p", "wb"))
-                        main.show_message(device, "New Highscore !!!", fill="white", font=proportional(
-                            CP437_FONT), scroll_delay=0.01)
+                        main.scroll_text("New Highscore !!!")
 
                 return  # can't fit a new piece on the board, so game over
         if not PI:
@@ -77,13 +82,15 @@ def runTetrisGame():
                 if (axis == 1 and val == 0):
                     movingDown = False
 
-                if (axis == 0 and val == -1) and isValidPosition(board, fallingPiece, adjX=-1):
+                if ((axis == 0 and val == -1)
+                        and isValidPosition(board, fallingPiece, adjX=-1)):
                     fallingPiece['x'] -= 1
                     movingLeft = True
                     movingRight = False
                     lastMoveSidewaysTime = time.time()
 
-                if (axis == 0 and val == 1) and isValidPosition(board, fallingPiece, adjX=1):
+                if ((axis == 0 and val == 1)
+                        and isValidPosition(board, fallingPiece, adjX=1)):
                     fallingPiece['x'] += 1
                     movingLeft = False
                     movingRight = True
@@ -104,46 +111,47 @@ def runTetrisGame():
 
             if event.type == pygame.KEYDOWN:
 
-                if (event.key == K_LEFT) and isValidPosition(board, fallingPiece, adjX=-1):
+                if (event.key == pygame.K_LEFT) and isValidPosition(board, fallingPiece, adjX=-1):
                     fallingPiece['x'] -= 1
                     movingLeft = True
                     movingRight = False
                     lastMoveSidewaysTime = time.time()
 
-                if (event.key == K_RIGHT) and isValidPosition(board, fallingPiece, adjX=1):
+                if (event.key == pygame.K_RIGHT) and isValidPosition(board, fallingPiece, adjX=1):
                     fallingPiece['x'] += 1
                     movingLeft = False
                     movingRight = True
                     lastMoveSidewaysTime = time.time()
 
-                if (event.key == K_DOWN):
+                if (event.key == pygame.K_DOWN):
                     movingDown = True
                     if isValidPosition(board, fallingPiece, adjY=1):
                         fallingPiece['y'] += 1
                     lastMoveDownTime = time.time()
 
-                if (event.key == K_4):
+                if (event.key == pygame.K_4):
                     fallingPiece['rotation'] = (
                         fallingPiece['rotation'] + 1) % len(PIECES[fallingPiece['shape']])
                     if not isValidPosition(board, fallingPiece):
                         fallingPiece['rotation'] = (
                             fallingPiece['rotation'] - 1) % len(PIECES[fallingPiece['shape']])
 
-                if (event.key == K_3):
+                if (event.key == pygame.K_3):
                     fallingPiece['rotation'] = (
                         fallingPiece['rotation'] - 1) % len(PIECES[fallingPiece['shape']])
                     if not isValidPosition(board, fallingPiece):
                         fallingPiece['rotation'] = (
                             fallingPiece['rotation'] + 1) % len(PIECES[fallingPiece['shape']])
 
-                if (event.key == K_UP):
+                if (event.key == pygame.K_UP):
                     movingDown = False
                     movingLeft = False
                     movingRight = False
-                    for i in range(1, BOARDHEIGHT):
+                    for i in range(1, main.BOARDHEIGHT):
                         if not isValidPosition(board, fallingPiece, adjY=i):
                             break
-                    score += i  # TODO: more digits on numbercounter, more scores
+                    score += i
+                    # TODO: more digits on numbercounter, more scores
                     fallingPiece['y'] += i - 1
 
             if event.type == pygame.KEYUP:
@@ -153,33 +161,36 @@ def runTetrisGame():
 
             if event.type == pygame.JOYBUTTONDOWN:
                 # print("Joystick button pressed: {}".format(event.button))
-                if (event.button == JKEY_A):
+                if (event.button == main.CONTROLLER['JKEY_A']):
                     fallingPiece['rotation'] = (
                         fallingPiece['rotation'] - 1) % len(PIECES[fallingPiece['shape']])
                     if not isValidPosition(board, fallingPiece):
                         fallingPiece['rotation'] = (
                             fallingPiece['rotation'] + 1) % len(PIECES[fallingPiece['shape']])
-                if (event.button == JKEY_Y):
+                if (event.button == main.CONTROLLER['JKEY_Y']):
                     movingDown = False
                     movingLeft = False
                     movingRight = False
-                    for i in range(1, BOARDHEIGHT):
+                    for i in range(1, main.BOARDHEIGHT):
                         if not isValidPosition(board, fallingPiece, adjY=i):
                             break
-                    score += i  # TODO: more digits on numbercounter, more scores
+                    score += i
+                    # TODO: more digits on numbercounter, more scores
                     fallingPiece['y'] += i - 1
 
                 #  return
 
         # handle moving the piece because of user input
-        if (movingLeft or movingRight) and time.time() - lastMoveSidewaysTime > MOVESIDEWAYSFREQ:
+        if ((movingLeft or movingRight)
+                and time.time() - lastMoveSidewaysTime > main.MOVESIDEWAYSFREQ):
             if movingLeft and isValidPosition(board, fallingPiece, adjX=-1):
                 fallingPiece['x'] -= 1
             elif movingRight and isValidPosition(board, fallingPiece, adjX=1):
                 fallingPiece['x'] += 1
             lastMoveSidewaysTime = time.time()
 
-        if movingDown and time.time() - lastMoveDownTime > MOVEDOWNFREQ and isValidPosition(board, fallingPiece, adjY=1):
+        if (movingDown and time.time() - lastMoveDownTime > main.MOVEDOWNFREQ
+                and isValidPosition(board, fallingPiece, adjY=1)):
             fallingPiece['y'] += 1
             lastMoveDownTime = time.time()
 
@@ -213,7 +224,7 @@ def runTetrisGame():
             oldpiece = PIECES_ORDER.get(nextPiece['shape'])
         # drawStatus(score, level)
         # drawNextPiece(nextPiece)
-        if fallingPiece != None:
+        if fallingPiece is not None:
             drawPiece(fallingPiece)
 
         main.updateScreen()
@@ -241,7 +252,7 @@ def getNewPiece():
     shape = random.choice(list(PIECES.keys()))
     newPiece = {'shape': shape,
                 'rotation': random.randint(0, len(PIECES[shape]) - 1),
-                'x': int(BOARDWIDTH / 2) - int(TEMPLATEWIDTH / 2),
+                'x': int(main.BOARDWIDTH / 2) - int(TEMPLATEWIDTH / 2),
                 'y': -2,  # start it above the board (i.e. less than 0)
                 'color': PIECES_ORDER.get(shape)}
     return newPiece
@@ -251,12 +262,12 @@ def addToBoard(board, piece):
     # fill in the board based on piece's location, shape, and rotation
     for x in range(TEMPLATEWIDTH):
         for y in range(TEMPLATEHEIGHT):
-            if PIECES[piece['shape']][piece['rotation']][y][x] != BLANK:
+            if PIECES[piece['shape']][piece['rotation']][y][x] != main.BLANK:
                 board[x + piece['x']][y + piece['y']] = piece['color']
 
 
 def isOnBoard(x, y):
-    return x >= 0 and x < BOARDWIDTH and y < BOARDHEIGHT
+    return x >= 0 and x < main.BOARDWIDTH and y < main.BOARDHEIGHT
 
 
 def isValidPosition(board, piece, adjX=0, adjY=0):
@@ -264,36 +275,37 @@ def isValidPosition(board, piece, adjX=0, adjY=0):
     for x in range(TEMPLATEWIDTH):
         for y in range(TEMPLATEHEIGHT):
             isAboveBoard = y + piece['y'] + adjY < 0
-            if isAboveBoard or PIECES[piece['shape']][piece['rotation']][y][x] == BLANK:
+            if isAboveBoard or PIECES[piece['shape']][piece['rotation']][y][x] == main.BLANK:
                 continue
             if not isOnBoard(x + piece['x'] + adjX, y + piece['y'] + adjY):
                 return False
-            if board[x + piece['x'] + adjX][y + piece['y'] + adjY] != BLANK:
+            if board[x + piece['x'] + adjX][y + piece['y'] + adjY] != main.BLANK:
                 return False
     return True
 
 
 def isCompleteLine(board, y):
     # Return True if the line filled with boxes with no gaps.
-    for x in range(BOARDWIDTH):
-        if board[x][y] == BLANK:
+    for x in range(main.BOARDWIDTH):
+        if board[x][y] == main.BLANK:
             return False
     return True
 
 
 def removeCompleteLines(board):
-    # Remove any completed lines on the board, move everything above them down, and return the number of complete lines.
+    # Remove any completed lines on the board, move everything above them down,
+    # and return the number of complete lines.
     numLinesRemoved = 0
-    y = BOARDHEIGHT - 1  # start y at the bottom of the board
+    y = main.BOARDHEIGHT - 1  # start y at the bottom of the board
     while y >= 0:
         if isCompleteLine(board, y):
             # Remove the line and pull boxes down by one line.
             for pullDownY in range(y, 0, -1):
-                for x in range(BOARDWIDTH):
+                for x in range(main.BOARDWIDTH):
                     board[x][pullDownY] = board[x][pullDownY-1]
             # Set very top line to blank.
-            for x in range(BOARDWIDTH):
-                board[x][0] = BLANK
+            for x in range(main.BOARDWIDTH):
+                board[x][0] = main.BLANK
             numLinesRemoved += 1
             # Note on the next iteration of the loop, y is the same.
             # This is so that if the line that was pulled down is also
@@ -304,31 +316,33 @@ def removeCompleteLines(board):
 
 
 def drawBoard(matrix):
-    for i in range(0, BOARDWIDTH):
-        for j in range(0, BOARDHEIGHT):
-            drawPixel(i, j, matrix[i][j])
+    for i in range(0, main.BOARDWIDTH):
+        for j in range(0, main.BOARDHEIGHT):
+            main.drawPixel(i, j, matrix[i][j])
 
 
 def getBlankBoard():
     # create and return a new blank board data structure
     board = []
-    for i in range(BOARDWIDTH):
-        board.append([BLANK] * BOARDHEIGHT)
+    for i in range(main.BOARDWIDTH):
+        board.append([main.BLANK] * main.BOARDHEIGHT)
     return board
 
 
 def drawPiece(piece, pixelx=None, pixely=None):
     shapeToDraw = PIECES[piece['shape']][piece['rotation']]
-    if pixelx == None and pixely == None:
-        # if pixelx & pixely hasn't been specified, use the location stored in the piece data structure
+    if pixelx is None and pixely is None:
+        # if pixelx & pixely hasn't been specified, use the location stored
+        # in the piece data structure
         pixelx = piece['x']
         pixely = piece['y']
 
     # draw each of the boxes that make up the piece
     for x in range(TEMPLATEWIDTH):
         for y in range(TEMPLATEHEIGHT):
-            if shapeToDraw[y][x] != BLANK:
-                drawPixel(pixelx + x, pixely+y, piece['color'])
+            if shapeToDraw[y][x] != main.BLANK:
+                main.drawPixel(pixelx + x, pixely + y, piece['color'])
+
 
 def scoreTetris(score, level, nextpiece):
     # if PI:
@@ -339,17 +353,17 @@ def scoreTetris(score, level, nextpiece):
 
     if PI:
         # one point per level
-        with canvas(device) as draw1:
+        with canvas(main.DEVICE) as draw1:
             for i in range(0, level):
-                drawScorePixel(i*2, 7, 1, draw1)
+                main.drawScorePixel(i*2, 7, 1, draw1)
 
             # score as 6 digit value
             for i in range(0, 6):
-                drawnumberMAX7219(_score % 10, i*4, 0, draw1)
+                main.drawnumberMAX7219(_score % 10, i*4, 0, draw1)
                 _score //= 10
 
             # draw next piece
-            drawTetrisMAX7219(nextpiece, 27, 0, draw1)
+            main.drawTetrisMAX7219(nextpiece, 27, 0, draw1)
 
             if PI:
-                device.show()
+                main.DEVICE.show()

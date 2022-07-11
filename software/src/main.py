@@ -7,16 +7,16 @@
 # http://inventwithpython.com/pygame
 # Released under a "Simplified BSD" license
 
-from pygame.locals import *
 import pygame
 import random
 import time
-import sys
 import os
 import pickle
+import subprocess
 from PIL import Image
 
 from . import PI, INSTALL_DIR, RES_DIR
+from .tetris import runTetrisGame
 
 # If Pi = False the script runs in simulation mode using pygame lib
 if PI:
@@ -24,7 +24,6 @@ if PI:
     os.environ["SDL_VIDEODRIVER"] = "dummy"
     import board
     import neopixel
-    import subprocess
     from luma.led_matrix.device import max7219
     from luma.core.interface.serial import spi, noop
     from luma.core.render import canvas
@@ -46,7 +45,6 @@ BOARDHEIGHT = PIXEL_Y
 BLANK = '.'
 MOVESIDEWAYSFREQ = 0.15
 MOVEDOWNFREQ = 0.15
-FALLING_SPEED = 0.8
 LED_BRIGHTNESS = 0.6
 
 
@@ -66,7 +64,6 @@ CYAN = (0, 255, 255)
 MAGENTA = (255,   0, 255)
 ORANGE = (255, 100,   0)
 
-SCORES = (0, 40, 100, 300, 1200)
 
 BORDERCOLOR = BLUE
 BGCOLOR = BLACK
@@ -75,11 +72,6 @@ TEXTSHADOWCOLOR = GRAY
 COLORS = (BLUE, GREEN, RED, YELLOW, CYAN, MAGENTA, ORANGE)
 LIGHTCOLORS = (LIGHTBLUE, LIGHTGREEN, LIGHTRED, LIGHTYELLOW)
 # assert len(COLORS) == len(LIGHTCOLORS) # each color must have light color
-
-
-TEMPLATEWIDTH = 5
-TEMPLATEHEIGHT = 5
-
 
 
 # snake constants #
@@ -114,38 +106,43 @@ theTetrisFont = [
     0x7E, 0x7E, 0x18, 0x18,  # T
 ]
 
+DEVICE = None
+PIXELS = None
 if PI:
     serial = spi(port=0, device=0, gpio=noop())
-    device = max7219(serial, cascaded=4,
+    DEVICE = max7219(serial, cascaded=4,
                      blocks_arranged_in_reverse_order=False)
     pixel_pin = board.D18
     # The number of NeoPixels
     num_pixels = PIXEL_X*PIXEL_Y
-    ORDER = neopixel.GRB
-    pixels = neopixel.NeoPixel(
-        pixel_pin, num_pixels, brightness=LED_BRIGHTNESS, auto_write=False, pixel_order=ORDER)
+    order = neopixel.GRB
+    PIXELS = neopixel.NeoPixel(
+        pixel_pin, num_pixels, brightness=LED_BRIGHTNESS,
+        auto_write=False, pixel_order=order)
 
 # key server for controller #
 
 QKEYDOWN = 0
 QKEYUP = 1
 
-JKEY_X = 3
-JKEY_Y = 2
-JKEY_A = 1
-JKEY_B = 0
-JKEY_R = 10
-JKEY_L = 9
-JKEY_SEL = 4
-JKEY_START = 6
+CONTROLLER = {
+    'JKEY_X': 3,
+    'JKEY_Y': 2,
+    'JKEY_A': 1,
+    'JKEY_B': 0,
+    'JKEY_R': 10,
+    'JKEY_L': 9,
+    'JKEY_SEL': 4,
+    'JKEY_START': 6,
+}
 
 mykeys = {
-    K_1: JKEY_A,
-    K_2: JKEY_B,
-    K_3: JKEY_Y,
-    K_4: JKEY_X,
-    K_x: JKEY_SEL,
-    K_s: JKEY_START
+    pygame.K_1: CONTROLLER['JKEY_A'],
+    pygame.K_2: CONTROLLER['JKEY_B'],
+    pygame.K_3: CONTROLLER['JKEY_Y'],
+    pygame.K_4: CONTROLLER['JKEY_X'],
+    pygame.K_x: CONTROLLER['JKEY_SEL'],
+    pygame.K_s: CONTROLLER['JKEY_START'],
 }
 
 mask = bytearray([1, 2, 4, 8, 16, 32, 64, 128])
@@ -172,14 +169,12 @@ def main():
         drawImage(f'{RES_DIR}/pi.bmp')
         time.sleep(2)
     else:
-        device.contrast(200)
+        DEVICE.contrast(200)
         pygame.init()
         drawImage(f'{RES_DIR}/pi.bmp')
         pygame.joystick.init()
-        while joystick_detected == False:
-            show_message(
-                device, "Waiting for controller...", fill="white",
-                font=proportional(CP437_FONT), scroll_delay=0.01)
+        while not joystick_detected:
+            scroll_text("Waiting for controller...")
             pygame.joystick.quit()
             pygame.joystick.init()
             try:
@@ -196,9 +191,7 @@ def main():
 
     drawClock(1)
     if PI:
-        show_message(
-            device, "Let's play", fill="white",
-            font=proportional(CP437_FONT))
+        scroll_text("Let's play")
 
     while True:
         clearScreen()
@@ -230,7 +223,7 @@ def main():
         pygame.event.pump()
         for event in pygame.event.get():
             # print("event detected {}".format(event))
-            if event.type == pygame.JOYBUTTONDOWN or event.type == KEYDOWN:
+            if event.type == pygame.JOYBUTTONDOWN or event.type == pygame.KEYDOWN:
                 if event.type == pygame.JOYBUTTONDOWN:
                     myevent = event.button
                 else:
@@ -238,15 +231,15 @@ def main():
                         myevent = mykeys[event.key]
                     else:
                         myevent = -1
-                if (myevent == JKEY_B):
+                if (myevent == CONTROLLER['JKEY_B']):
                     drawClock(1)
-                if (myevent == JKEY_A):
+                if (myevent == CONTROLLER['JKEY_A']):
                     runPongGame()
-                if (myevent == JKEY_X):
+                if (myevent == CONTROLLER['JKEY_X']):
                     runTetrisGame()
-                if (myevent == JKEY_Y):
+                if (myevent == CONTROLLER['JKEY_Y']):
                     runSnakeGame()
-                if (myevent == JKEY_SEL):
+                if (myevent == CONTROLLER['JKEY_SEL']):
                     shutdownScreen()
 
             if event.type == pygame.QUIT:  # get all the QUIT events
@@ -258,202 +251,6 @@ def main():
 
 
 # gaming main routines #
-
-def runPongGame():
-    down = 0
-    up = 1
-    left = 0
-    right = 1
-    lowerbarx = PIXEL_X//2
-    upperbarx = PIXEL_X//2
-    score1 = 0
-    score2 = 0
-    ballx = PIXEL_X//2
-    bally = PIXEL_Y//2
-    directiony = down
-    directionx = left
-    movingRightUpper = False
-    movingLeftUpper = False
-    movingRightLower = False
-    movingLeftLower = False
-    restart = False
-    lastLowerMoveSidewaysTime = time.time()
-    lastUpperMoveSidewaysTime = time.time()
-
-    while True:  # main game loop
-
-        pygame.event.pump()
-        for event in pygame.event.get():
-            if event.type == pygame.JOYAXISMOTION:
-                axis = event.axis
-                val = round(event.value)
-                if (axis == 0 and val == -1):
-                    movingLeftLower = True
-                    movingRightLower = False
-                if (axis == 0 and val == 1):
-                    movingLeftLower = False
-                    movingRightLower = True
-                if (val == 0):
-                    movingLeftLower = False
-                    movingRightLower = False
-
-            if event.type == pygame.JOYBUTTONDOWN:
-                # print("Joystick button pressed: {}".format(event.button))
-                if (event.button == JKEY_A):
-                    movingLeftUpper = True
-                    movingRightUpper = False
-                if (event.button == JKEY_B):
-                    movingLeftUpper = False
-                    movingRightUpper = True
-                if (event.button == JKEY_SEL):
-                    # quit game
-                    return
-
-            if event.type == pygame.JOYBUTTONUP:
-                movingLeftUpper = False
-                movingRightUpper = False
-
-            if event.type == pygame.KEYDOWN:
-                if(event.key == K_LEFT):
-                    movingLeftLower = True
-                    movingRightLower = False
-                if(event.key == K_RIGHT):
-                    movingLeftLower = False
-                    movingRightLower = True
-                if(event.key == K_1):
-                    movingLeftUpper = True
-                    movingRightUpper = False
-                if(event.key == K_2):
-                    movingLeftUpper = False
-                    movingRightUpper = True
-                if(event.key == K_s):
-                    return
-
-            if event.type == pygame.KEYUP:
-                movingLeftLower = False
-                movingRightLower = False
-                movingLeftUpper = False
-                movingRightUpper = False
-
-        if (movingLeftLower) and time.time() - lastLowerMoveSidewaysTime > MOVESIDEWAYSFREQ:
-            if lowerbarx > 1:
-                lowerbarx -= 1
-            lastLowerMoveSidewaysTime = time.time()
-        if (movingRightLower) and time.time() - lastLowerMoveSidewaysTime > MOVESIDEWAYSFREQ:
-            if lowerbarx < PIXEL_X-2:
-                lowerbarx += 1
-            lastLowerMoveSidewaysTime = time.time()
-        if (movingLeftUpper) and time.time() - lastUpperMoveSidewaysTime > MOVESIDEWAYSFREQ:
-            if upperbarx > 1:
-                upperbarx -= 1
-            lastUpperMoveSidewaysTime = time.time()
-        if (movingRightUpper) and time.time() - lastUpperMoveSidewaysTime > MOVESIDEWAYSFREQ:
-            if upperbarx < PIXEL_X-2:
-                upperbarx += 1
-            lastUpperMoveSidewaysTime = time.time()
-
-        if not PI:
-            checkForQuit()
-
-        if (directiony == up):
-            if (bally > 1):
-                bally -= 1
-            else:
-                if (abs(ballx-upperbarx) < 2):
-                    directiony = down
-                    if (ballx == upperbarx+1):
-                        if (directionx == left):
-                            directionx = right
-                    if (ballx == upperbarx-1):
-                        if (directionx == right):
-                            directionx = left
-                elif ((ballx-upperbarx == 2) and (directionx == left)):
-                    directionx = right
-                    directiony = down
-                elif ((ballx-upperbarx == -2) and (directionx == right)):
-                    directionx = left
-                    directiony = down
-                else:
-                    bally -= 1
-                    score1 += 1
-                    restart = True
-        else:
-            if (bally < PIXEL_Y-2):
-                bally += 1
-            else:
-                if (abs(ballx-lowerbarx) < 2):
-                    directiony = up
-                    if (ballx == lowerbarx+1):
-                        if (directionx == left):
-                            directionx = right
-                    if (ballx == lowerbarx-1):
-                        if (directionx == right):
-                            directionx = left
-                elif ((ballx-lowerbarx == 2) and (directionx == left)):
-                    directionx = right
-                    directiony = up
-                elif ((ballx-lowerbarx == -2) and (directionx == right)):
-                    directionx = left
-                    directiony = up
-                else:
-                    bally += 1
-                    score2 += 1
-                    restart = True
-
-        if (directionx == left):
-            if (ballx > 0):
-                if (ballx == 1):
-                    ballx -= 1
-                else:
-                    ballx -= random.randint(1, 2)
-            else:
-                directionx = right
-                ballx += 1
-                if(directiony == up):
-                    if(bally > 2):
-                        bally -= 1
-                if(directiony == down):
-                    if(bally < PIXEL_Y-2):
-                        bally += 1
-        else:
-            if (ballx < PIXEL_X-1):
-                if (ballx == 8):
-                    ballx += 1
-                else:
-                    ballx += random.randint(1, 2)
-            else:
-                directionx = left
-                ballx -= random.randint(1, 2)
-                if(directiony == up):
-                    if(bally > 3):
-                        bally -= random.randint(0, 2)
-                if(directiony == down):
-                    if(bally < PIXEL_Y-3):
-                        bally += random.randint(0, 2)
-        clearScreen()
-        drawBall(ballx, bally)
-        drawBar(upperbarx, 0)
-        drawBar(lowerbarx, PIXEL_Y-1)
-        twoscoreText(score1, score2)
-        updateScreen()
-
-        if (score1 == 9) or (score2 == 9):
-            time.sleep(3)
-            return
-
-        if restart:
-            time.sleep(1)
-            ballx = PIXEL_X//2
-            bally = PIXEL_Y//2
-            if directiony == down:
-                directiony = up
-            else:
-                directiony = down
-            restart = False
-        else:
-            time.sleep(.1)
-
-
 def runSnakeGame():
 
     # Set a random start point.
@@ -465,7 +262,7 @@ def runSnakeGame():
     direction = RIGHT
     score = 0
 
-    if os.path.isfile(f'{INSTALL_DIR}/hs_snake.p') == True:
+    if os.path.isfile(f'{INSTALL_DIR}/hs_snake.p'):
         try:
             highscore = pickle.load(open(f"{INSTALL_DIR}/hs_snake.p", "rb"))
         except EOFError:
@@ -473,9 +270,7 @@ def runSnakeGame():
     else:
         highscore = 0
     if PI:
-        show_message(
-            device, "Snake Highscore: " + str(highscore),
-            fill="white", font=proportional(CP437_FONT), scroll_delay=0.01)
+        scroll_text(f"Snake Highscore: {str(highscore)}")
 
     # Start the apple in a random place.
     apple = getRandomLocation(wormCoords)
@@ -502,37 +297,39 @@ def runSnakeGame():
                             direction = UP
 
             if event.type == pygame.KEYDOWN:
-                if (event.key == K_LEFT):
+                if (event.key == pygame.K_LEFT):
                     if direction != RIGHT:
                         direction = LEFT
-                if (event.key == K_RIGHT):
+                if (event.key == pygame.K_RIGHT):
                     if direction != LEFT:
                         direction = RIGHT
-                if (event.key == K_DOWN):
+                if (event.key == pygame.K_DOWN):
                     if direction != UP:
                         direction = DOWN
-                if (event.key == K_UP):
+                if (event.key == pygame.K_UP):
                     if direction != DOWN:
                         direction = UP
-                if (event.key == JKEY_SEL):
+                if (event.key == CONTROLLER['JKEY_SEL']):
                     # quit game
                     return
 
             if event.type == pygame.JOYBUTTONDOWN:
-                if (event.button == JKEY_SEL):
+                if (event.button == CONTROLLER['JKEY_SEL']):
                     # quit game
                     return
 
         # check if the worm has hit itself or the edge
-        if wormCoords[HEAD]['x'] == -1 or wormCoords[HEAD]['x'] == BOARDWIDTH or wormCoords[HEAD]['y'] == -1 or wormCoords[HEAD]['y'] == BOARDHEIGHT:
+        if (wormCoords[HEAD]['x'] == -1
+                or wormCoords[HEAD]['x'] == BOARDWIDTH
+                or wormCoords[HEAD]['y'] == -1
+                or wormCoords[HEAD]['y'] == BOARDHEIGHT):
             time.sleep(1.5)
             if score > highscore:
                 highscore = score
                 if PI:
                     pickle.dump(highscore, open(
                         f"{INSTALL_DIR}/hs_snake.p", "wb"))
-                    show_message(device, "New Highscore !!!", fill="white", font=proportional(
-                        CP437_FONT), scroll_delay=0.01)
+                    scroll_text("New Highscore !!!")
             return  # game over
         for wormBody in wormCoords[1:]:
             if wormBody['x'] == wormCoords[HEAD]['x'] and wormBody['y'] == wormCoords[HEAD]['y']:
@@ -542,8 +339,7 @@ def runSnakeGame():
                     if PI:
                         pickle.dump(highscore, open(
                             f"{INSTALL_DIR}/hs_snake.p", "wb"))
-                        show_message(device, "New Highscore !!!", fill="white", font=proportional(
-                            CP437_FONT), scroll_delay=0.01)
+                        scroll_text("New Highscore !!!")
                 return  # game over
 
         # check if worm has eaten an apple
@@ -594,8 +390,8 @@ def drawClock(color):
     joystick_cnt = 0
 
     if PI:
-        device.clear()
-        device.show()
+        DEVICE.clear()
+        DEVICE.show()
 
     hour = time.localtime().tm_hour
     minute = time.localtime().tm_min
@@ -607,7 +403,7 @@ def drawClock(color):
         for event in pygame.event.get():  # User did something
             # print("event detected {}".format(event))
             # Possible joystick actions: JOYAXISMOTION JOYBALLMOTION JOYBUTTONDOWN JOYBUTTONUP JOYHATMOTION
-            if event.type == pygame.JOYBUTTONDOWN or event.type == KEYDOWN:
+            if event.type == pygame.JOYBUTTONDOWN or event.type == pygame.KEYDOWN:
                 if event.type == pygame.JOYBUTTONDOWN:
                     myevent = event.button
                 else:
@@ -616,13 +412,15 @@ def drawClock(color):
                     else:
                         myevent = -1
                 # print("Joystick button pressed: {}".format(event.button))
-                if (myevent == JKEY_START):
+                if (myevent == CONTROLLER['JKEY_START']):
                     # print("exiting clock")
                     clearScreen()
                     updateScreen()
                     return
-                if (myevent == JKEY_A or myevent == JKEY_B
-                        or myevent == JKEY_X or myevent == JKEY_Y):
+                if (myevent == CONTROLLER['JKEY_A']
+                        or myevent == CONTROLLER['JKEY_B']
+                        or myevent == CONTROLLER['JKEY_X']
+                        or myevent == CONTROLLER['JKEY_Y']):
                     color = color + 1
                     if (color > (len(COLORS) - 1)):
                         color = 0
@@ -641,10 +439,10 @@ def drawClock(color):
                         0)  # create a joystick instance
                     joystick.init()  # init instance
                     # print("Initialized joystick: {}".format(joystick.get_name()))
-                    #joystick_detected = True
+                    # joystick_detected = True
                 except pygame.error:
                     print("no joystick found.")
-                    #joystick_detected = False
+                    # joystick_detected = False
             else:
                 joystick_cnt += 1
 
@@ -668,11 +466,10 @@ def drawClock(color):
 def shutdownScreen():
 
     if PI:
-        device.clear()
-        device.show()
+        DEVICE.clear()
+        DEVICE.show()
         drawImage(f'{RES_DIR}/shutdown.bmp')
-        show_message(device, "Press Select to shutdown!", fill="white",
-                     font=proportional(CP437_FONT), scroll_delay=0.01)
+        scroll_text("Press Select to shutdown!")
     else:
         drawImage(f'{RES_DIR}/shutdown.bmp')
 
@@ -681,8 +478,9 @@ def shutdownScreen():
         pygame.event.pump()
         for event in pygame.event.get():  # User did something
             # print("event detected {}".format(event))
-            # Possible joystick actions: JOYAXISMOTION JOYBALLMOTION JOYBUTTONDOWN JOYBUTTONUP JOYHATMOTION
-            if event.type == pygame.JOYBUTTONDOWN or event.type == KEYDOWN:
+            # Possible joystick actions:
+            # JOYAXISMOTION JOYBALLMOTION JOYBUTTONDOWN JOYBUTTONUP JOYHATMOTION
+            if event.type == pygame.JOYBUTTONDOWN or event.type == pygame.KEYDOWN:
                 if event.type == pygame.JOYBUTTONDOWN:
                     myevent = event.button
                 else:
@@ -691,7 +489,7 @@ def shutdownScreen():
                     else:
                         myevent = -1
                 # print("Joystick button pressed: {}".format(event.button))
-                if (myevent != JKEY_SEL):
+                if (myevent != CONTROLLER['JKEY_SEL']):
                     # print("exiting clock")
                     clearScreen()
                     updateScreen()
@@ -702,10 +500,9 @@ def shutdownScreen():
                     else:
                         clearScreen()
                         updateScreen()
-                        show_message(device, "Shutdown...", fill="white", font=proportional(
-                            CP437_FONT), scroll_delay=0.01)
+                        scroll_text("Shutdown...")
                         subprocess.Popen(['shutdown', '-h', 'now'])
-                        #call("sudo nohup shutdown -h now", shell=True)
+                        # call("sudo nohup shutdown -h now", shell=True)
                         terminate()
             if event.type == pygame.QUIT:  # get all the QUIT events
                 terminate()  # terminate if any QUIT events are present
@@ -737,14 +534,14 @@ def drawHalfImage(filename, offset):
 
 def clearScreen():
     if PI:
-        pixels.fill((0, 0, 0))
+        PIXELS.fill((0, 0, 0))
     else:
         DISPLAYSURF.fill(BGCOLOR)
 
 
 def updateScreen():
     if PI:
-        pixels.show()
+        PIXELS.show()
     else:
         pygame.display.update()
 
@@ -756,9 +553,9 @@ def drawPixel(x, y, color):
         try:
             if (x >= 0 and y >= 0 and color >= 0):
                 if x % 2 == 1:
-                    pixels[x*PIXEL_Y+y] = COLORS[color]
+                    PIXELS[x*PIXEL_Y+y] = COLORS[color]
                 else:
-                    pixels[x*PIXEL_Y+(PIXEL_Y-1-y)] = COLORS[color]
+                    PIXELS[x*PIXEL_Y+(PIXEL_Y-1-y)] = COLORS[color]
         except:
             print(str(x) + ' --- ' + str(y))
     else:
@@ -770,9 +567,9 @@ def drawPixelRgb(x, y, r, g, b):
     if PI:
         if (x >= 0 and y >= 0):
             if x % 2 == 1:
-                pixels[x*PIXEL_Y+y] = (r, g, b)
+                PIXELS[x*PIXEL_Y+y] = (r, g, b)
             else:
-                pixels[x*PIXEL_Y+(PIXEL_Y-1-y)] = (r, g, b)
+                PIXELS[x*PIXEL_Y+(PIXEL_Y-1-y)] = (r, g, b)
     else:
         pygame.draw.rect(DISPLAYSURF, (r, g, b),
                          (x*SIZE+1, y*SIZE+1, SIZE-2, SIZE-2))
@@ -816,9 +613,9 @@ def makeTextObjs(text, font, color):
     return surf, surf.get_rect()
 
 
-def scrollText(text):
+def scroll_text(text):
     if PI:
-        show_message(device, text, fill="white", font=proportional(CP437_FONT))
+        show_message(DEVICE, text, fill="white", font=proportional(CP437_FONT))
     else:
         titleSurf, titleRect = makeTextObjs(str(text), BASICFONT, TEXTCOLOR)
         titleRect.center = (int(WINDOWWIDTH / 2) - 3,
@@ -831,7 +628,7 @@ def scoreText(score):
     if _score > 999:
         _score = 999
     if PI:
-        with canvas(device) as draw:
+        with canvas(DEVICE) as draw:
             for i in range(0, 3):
                 text(draw, ((3-i)*8, 0), str(_score % 10), fill="white")
                 _score //= 10
@@ -842,8 +639,6 @@ def scoreText(score):
         DISPLAYSURF.blit(titleSurf, titleRect)
 
 
-
-
 def twoscoreText(score1, score2):
     _score1 = score1
     _score2 = score2
@@ -852,7 +647,7 @@ def twoscoreText(score1, score2):
     if _score2 > 9:
         _score2 = 9
     if PI:
-        with canvas(device) as draw:
+        with canvas(DEVICE) as draw:
             text(draw, (0, 0), str(_score1), fill="white")
             text(draw, (8, 0), ":", fill="white")
             text(draw, (16, 0), str(_score2), fill="white")
@@ -874,10 +669,10 @@ def terminate():
 
 
 def checkForQuit():
-    for event in pygame.event.get(QUIT):  # get all the QUIT events
+    for event in pygame.event.get(pygame.QUIT):  # get all the QUIT events
         terminate()  # terminate if any QUIT events are present
-    for event in pygame.event.get(KEYUP):  # get all the KEYUP events
-        if event.key == K_ESCAPE:
+    for event in pygame.event.get(pygame.KEYUP):  # get all the KEYUP events
+        if event.key == pygame.K_ESCAPE:
             terminate()  # terminate if the KEYUP event was for the Esc key
         pygame.event.post(event)  # put the other KEYUP event objects back
 
@@ -907,18 +702,6 @@ def drawApple(coord):
     x = coord['x']
     y = coord['y']
     drawPixel(x, y, 2)
-
-# pong subroutines #
-
-
-def drawBar(x, y):
-    drawPixel(x-1, y, 1)
-    drawPixel(x, y, 1)
-    drawPixel(x+1, y, 1)
-
-
-def drawBall(x, y):
-    drawPixel(x, y, 0)
 
 
 if __name__ == '__main__':
