@@ -11,7 +11,7 @@ from . import INSTALL_DIR, PI
 
 PIECES_ORDER = {'S': 0, 'Z': 1, 'I': 2, 'J': 3, 'L': 4, 'O': 5, 'T': 6}
 SCORES = (0, 40, 100, 300, 1200)
-FALLING_SPEED = 0.8
+FALLING_SPEED = 0.7
 
 TEMPLATEWIDTH = 5
 TEMPLATEHEIGHT = 5
@@ -69,7 +69,6 @@ def runTetrisGame():
 
             # D-Pad Movement
             if event.type == pygame.JOYBUTTONDOWN:
-                print(event.__dict__)
                 if (event.button == pygame.CONTROLLER_BUTTON_DPAD_DOWN
                         and isValidPosition(board, fallingPiece, adjY=1)):
                     fallingPiece['y'] += 1
@@ -80,7 +79,6 @@ def runTetrisGame():
                         if not isValidPosition(board, fallingPiece, adjY=i):
                             break
                     score += i
-                    # TODO: more digits on numbercounter, more scores
                     fallingPiece['y'] += i - 1
                 elif (event.button == pygame.CONTROLLER_BUTTON_DPAD_LEFT
                         and isValidPosition(board, fallingPiece, adjX=-1)):
@@ -100,6 +98,7 @@ def runTetrisGame():
                     if not isValidPosition(board, fallingPiece):
                         fallingPiece['rotation'] = (
                             fallingPiece['rotation'] + 1) % len(PIECES[fallingPiece['shape']])
+                # Rotate Right
                 if (event.button == main.CONTROLLER['JKEY_B']
                         or event.button == main.CONTROLLER['JKEY_Y']):
                     fallingPiece['rotation'] = (
@@ -107,6 +106,11 @@ def runTetrisGame():
                     if not isValidPosition(board, fallingPiece):
                         fallingPiece['rotation'] = (
                             fallingPiece['rotation'] - 1) % len(PIECES[fallingPiece['shape']])
+                # Pause screen (with option to exit)
+                if event.button == main.CONTROLLER['JKEY_START']:
+                    exit_game = pause_game()
+                    if exit_game:
+                        return
 
         # let the piece fall if it is time to fall
         if time.time() - lastFallTime > fallFreq:
@@ -126,6 +130,15 @@ def runTetrisGame():
                 fallingPiece['y'] += 1
                 lastFallTime = time.time()
 
+        # Ghost Piece to help aiming
+        if fallingPiece is not None:
+            ghost_piece = fallingPiece.copy()
+            i = 0
+            for i in range(1, main.BOARDHEIGHT):
+                if not isValidPosition(board, ghost_piece, adjY=i):
+                    break
+            ghost_piece['y'] += i - 1
+
         # drawing everything on the screen
         main.clearScreen()
         drawBoard(board)
@@ -139,11 +152,12 @@ def runTetrisGame():
         # drawStatus(score, level)
         # drawNextPiece(nextPiece)
         if fallingPiece is not None:
+            drawPiece(ghost_piece, True)
             drawPiece(fallingPiece)
 
         main.updateScreen()
         # FPSCLOCK.tick(FPS)
-        time.sleep(.05)
+        time.sleep(.02)
 
 # tetris subroutines #
 
@@ -243,7 +257,7 @@ def getBlankBoard():
     return board
 
 
-def drawPiece(piece, pixelx=None, pixely=None):
+def drawPiece(piece, ghost=False, pixelx=None, pixely=None):
     shapeToDraw = PIECES[piece['shape']][piece['rotation']]
     if pixelx is None and pixely is None:
         # if pixelx & pixely hasn't been specified, use the location stored
@@ -255,7 +269,10 @@ def drawPiece(piece, pixelx=None, pixely=None):
     for x in range(TEMPLATEWIDTH):
         for y in range(TEMPLATEHEIGHT):
             if shapeToDraw[y][x] != main.BLANK:
-                main.drawPixel(pixelx + x, pixely + y, piece['color'])
+                if ghost:
+                    main.drawDarkPixel(pixelx + x, pixely + y, piece['color'])
+                else:
+                    main.drawPixel(pixelx + x, pixely + y, piece['color'])
 
 
 def scoreTetris(score, level, nextpiece):
@@ -281,3 +298,17 @@ def scoreTetris(score, level, nextpiece):
 
             if PI:
                 main.DEVICE.show()
+
+
+def pause_game():
+    main.scroll_text("PAUSE")
+    while True:
+        pygame.event.pump()
+        for event in pygame.event.get():
+            if event.type == pygame.JOYBUTTONDOWN:
+                # Keep Playing
+                if event.button == main.CONTROLLER['JKEY_START']:
+                    return False
+                # End Game
+                elif event.button == main.CONTROLLER['JKEY_SEL']:
+                    return True

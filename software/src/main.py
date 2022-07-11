@@ -51,16 +51,23 @@ WHITE = (255, 255, 255)
 GRAY = (185, 185, 185)
 BLACK = (0,   0,   0)
 RED = (255,   0,   0)
+DARKRED = (128, 0, 0)
 LIGHTRED = (175,  20,  20)
 GREEN = (0, 255,   0)
+DARKGREEN = (0, 128,   0)
 LIGHTGREEN = (20, 175,  20)
 BLUE = (0,   0, 255)
+DARKBLUE = (0,   0, 128)
 LIGHTBLUE = (20,  20, 175)
 YELLOW = (255, 255,   0)
+DARKYELLOW = (128, 128,   0)
 LIGHTYELLOW = (175, 175,  20)
 CYAN = (0, 255, 255)
+DARKCYAN = (0, 128, 128)
 MAGENTA = (255,   0, 255)
+DARKMAGENTA = (128,   0, 128)
 ORANGE = (255, 100,   0)
+DARKORANGE = (128, 50,   0)
 
 
 BORDERCOLOR = BLUE
@@ -68,6 +75,7 @@ BGCOLOR = BLACK
 TEXTCOLOR = WHITE
 TEXTSHADOWCOLOR = GRAY
 COLORS = (BLUE, GREEN, RED, YELLOW, CYAN, MAGENTA, ORANGE)
+DARKCOLORS = (DARKBLUE, DARKGREEN, DARKRED, DARKYELLOW, DARKCYAN, DARKMAGENTA, DARKORANGE)
 LIGHTCOLORS = (LIGHTBLUE, LIGHTGREEN, LIGHTRED, LIGHTYELLOW)
 # assert len(COLORS) == len(LIGHTCOLORS) # each color must have light color
 
@@ -172,7 +180,7 @@ def main():
         drawImage(f'{RES_DIR}/pi.bmp')
         pygame.joystick.init()
         while not joystick_detected:
-            scroll_text("Waiting for controller...")
+            # scroll_text("Waiting for controller...")
             pygame.joystick.quit()
             pygame.joystick.init()
             try:
@@ -561,6 +569,29 @@ def drawPixel(x, y, color):
             DISPLAYSURF, COLORS[color], (x*SIZE+1, y*SIZE+1, SIZE-2, SIZE-2))
 
 
+def drawDarkPixel(x, y, color):
+
+    if color == BLANK:
+        return
+
+    darkcolor = COLORS[color]
+    print(darkcolor)
+    darkcolor = [int(darkcolor[0] * 0.05), int(darkcolor[1] * 0.05), int(darkcolor[2] * 0.05)]
+    print(darkcolor)
+    if PI:
+        try:
+            if (x >= 0 and y >= 0 and color >= 0):
+                if x % 2 == 1:
+                    PIXELS[x*PIXEL_Y+y] = darkcolor
+                else:
+                    PIXELS[x*PIXEL_Y+(PIXEL_Y-1-y)] = darkcolor
+        except:
+            print(str(x) + ' --- ' + str(y))
+    else:
+        pygame.draw.rect(
+            DISPLAYSURF, darkcolor, (x*SIZE+1, y*SIZE+1, SIZE-2, SIZE-2))
+
+
 def drawPixelRgb(x, y, r, g, b):
     if PI:
         if (x >= 0 and y >= 0):
@@ -632,27 +663,6 @@ def scoreText(score):
                 _score //= 10
     else:
         titleSurf, titleRect = makeTextObjs(str(_score), BASICFONT, TEXTCOLOR)
-        titleRect.center = (int(WINDOWWIDTH / 2) - 3,
-                            int(WINDOWHEIGHT / 2) - 3)
-        DISPLAYSURF.blit(titleSurf, titleRect)
-
-
-def twoscoreText(score1, score2):
-    _score1 = score1
-    _score2 = score2
-    if _score1 > 9:
-        _score1 = 9
-    if _score2 > 9:
-        _score2 = 9
-    if PI:
-        with canvas(DEVICE) as draw:
-            text(draw, (0, 0), str(_score1), fill="white")
-            text(draw, (8, 0), ":", fill="white")
-            text(draw, (16, 0), str(_score2), fill="white")
-            text(draw, (24, 0), " ", fill="white")
-    else:
-        titleSurf, titleRect = makeTextObjs(
-            str(_score1)+':'+str(_score2), BASICFONT, TEXTCOLOR)
         titleRect.center = (int(WINDOWWIDTH / 2) - 3,
                             int(WINDOWHEIGHT / 2) - 3)
         DISPLAYSURF.blit(titleSurf, titleRect)
