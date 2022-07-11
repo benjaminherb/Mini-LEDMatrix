@@ -8,15 +8,14 @@
 # Released under a "Simplified BSD" license
 
 import pygame
-import random
 import time
 import os
-import pickle
 import subprocess
 from PIL import Image
 
 from . import PI, INSTALL_DIR, RES_DIR
 from .tetris import runTetrisGame
+from .snake import runSnakeGame
 
 # If Pi = False the script runs in simulation mode using pygame lib
 if PI:
@@ -75,18 +74,11 @@ BGCOLOR = BLACK
 TEXTCOLOR = WHITE
 TEXTSHADOWCOLOR = GRAY
 COLORS = (BLUE, GREEN, RED, YELLOW, CYAN, MAGENTA, ORANGE)
-DARKCOLORS = (DARKBLUE, DARKGREEN, DARKRED, DARKYELLOW, DARKCYAN, DARKMAGENTA, DARKORANGE)
+DARKCOLORS = (DARKBLUE, DARKGREEN, DARKRED, DARKYELLOW,
+              DARKCYAN, DARKMAGENTA, DARKORANGE)
 LIGHTCOLORS = (LIGHTBLUE, LIGHTGREEN, LIGHTRED, LIGHTYELLOW)
 # assert len(COLORS) == len(LIGHTCOLORS) # each color must have light color
 
-
-# snake constants #
-UP = 'up'
-DOWN = 'down'
-LEFT = 'left'
-RIGHT = 'right'
-
-HEAD = 0  # syntactic sugar: index of the worm's head
 
 # font clock #
 
@@ -155,7 +147,6 @@ mask = bytearray([1, 2, 4, 8, 16, 32, 64, 128])
 
 
 def main():
-
     global FPSCLOCK, DISPLAYSURF, BASICFONT, BIGFONT
     global a1_counter, RUNNING
     a1_counter = 0
@@ -199,12 +190,13 @@ def main():
     if PI:
         scroll_text("Let's play")
 
+    menu_selected = 0
     while True:
+        # select one of the three menu entries (Tetris, Snake, Clock)
         clearScreen()
         # drawSymbols()
-        drawImage(f'{RES_DIR}/select.bmp')
+        drawImage(f'{RES_DIR}/menu{menu_selected}.bmp')
         updateScreen()
-
         if not PI:
             checkForQuit()
 
@@ -215,8 +207,8 @@ def main():
                 pygame.joystick.quit()
                 pygame.joystick.init()
                 try:
-                    joystick = pygame.joystick.Joystick(
-                        0)  # create a joystick instance
+                    # create a joystick instance
+                    joystick = pygame.joystick.Joystick(0)
                     joystick.init()  # init instance
                     # print("Initialized joystick: {}".format(joystick.get_name()))
                     joystick_detected = True
@@ -229,167 +221,26 @@ def main():
         pygame.event.pump()
         for event in pygame.event.get():
             # print("event detected {}".format(event))
-            if event.type == pygame.JOYBUTTONDOWN or event.type == pygame.KEYDOWN:
-                if event.type == pygame.JOYBUTTONDOWN:
-                    myevent = event.button
-                else:
-                    if event.key in mykeys:
-                        myevent = mykeys[event.key]
-                    else:
-                        myevent = -1
-                if (myevent == CONTROLLER['JKEY_B']):
-                    drawClock(1)
-                if (myevent == CONTROLLER['JKEY_A']):
-                    runPongGame()
-                if (myevent == CONTROLLER['JKEY_X']):
-                    runTetrisGame()
-                if (myevent == CONTROLLER['JKEY_Y']):
-                    runSnakeGame()
-                if (myevent == CONTROLLER['JKEY_SEL']):
-                    shutdownScreen()
-
+            if event.type == pygame.JOYBUTTONDOWN:
+                print(event.button)
+                print(pygame.CONTROLLER_BUTTON_DPAD_DOWN)
+                if (event.button == pygame.CONTROLLER_BUTTON_DPAD_DOWN):
+                    menu_selected = (menu_selected + 1) % 3
+                if (event.button == pygame.CONTROLLER_BUTTON_DPAD_UP):
+                    menu_selected = (menu_selected - 1) % 3
+                if (event.button == pygame.CONTROLLER_BUTTON_START):
+                    if menu_selected == 0:
+                        runTetrisGame()
+                    if menu_selected == 1:
+                        runSnakeGame()
+                    if menu_selected == 2:
+                        drawClock(0)
             if event.type == pygame.QUIT:  # get all the QUIT events
                 terminate()  # terminate if any QUIT events are present
 
         time.sleep(.1)
 
     terminate()
-
-
-# gaming main routines #
-def runSnakeGame():
-
-    # Set a random start point.
-    startx = random.randint(2, BOARDWIDTH - 2)
-    starty = random.randint(2, BOARDHEIGHT - 2)
-    wormCoords = [{'x': startx,     'y': starty},
-                  {'x': startx - 1, 'y': starty},
-                  {'x': startx - 2, 'y': starty}]
-    direction = RIGHT
-    score = 0
-
-    if os.path.isfile(f'{INSTALL_DIR}/hs_snake.p'):
-        try:
-            highscore = pickle.load(open(f"{INSTALL_DIR}/hs_snake.p", "rb"))
-        except EOFError:
-            highscore = 0
-    else:
-        highscore = 0
-    if PI:
-        scroll_text(f"Snake Highscore: {str(highscore)}")
-
-    # Start the apple in a random place.
-    apple = getRandomLocation(wormCoords)
-
-    while True:  # main game loop
-        olddirection = direction
-        pygame.event.pump()
-        for event in pygame.event.get():
-            if event.type == pygame.JOYAXISMOTION:
-                if (olddirection == direction):   # only one direction change per step
-                    axis = event.axis
-                    val = round(event.value)
-                    if (axis == 0 and val == -1):
-                        if direction != RIGHT:
-                            direction = LEFT
-                    if (axis == 0 and val == 1):
-                        if direction != LEFT:
-                            direction = RIGHT
-                    if (axis == 1 and val == 1):
-                        if direction != UP:
-                            direction = DOWN
-                    if (axis == 1 and val == -1):
-                        if direction != DOWN:
-                            direction = UP
-
-            if event.type == pygame.KEYDOWN:
-                if (event.key == pygame.K_LEFT):
-                    if direction != RIGHT:
-                        direction = LEFT
-                if (event.key == pygame.K_RIGHT):
-                    if direction != LEFT:
-                        direction = RIGHT
-                if (event.key == pygame.K_DOWN):
-                    if direction != UP:
-                        direction = DOWN
-                if (event.key == pygame.K_UP):
-                    if direction != DOWN:
-                        direction = UP
-                if (event.key == CONTROLLER['JKEY_SEL']):
-                    # quit game
-                    return
-
-            if event.type == pygame.JOYBUTTONDOWN:
-                if (event.button == CONTROLLER['JKEY_SEL']):
-                    # quit game
-                    return
-
-        # check if the worm has hit itself or the edge
-        if (wormCoords[HEAD]['x'] == -1
-                or wormCoords[HEAD]['x'] == BOARDWIDTH
-                or wormCoords[HEAD]['y'] == -1
-                or wormCoords[HEAD]['y'] == BOARDHEIGHT):
-            time.sleep(1.5)
-            if score > highscore:
-                highscore = score
-                if PI:
-                    pickle.dump(highscore, open(
-                        f"{INSTALL_DIR}/hs_snake.p", "wb"))
-                    scroll_text("New Highscore !!!")
-            return  # game over
-        for wormBody in wormCoords[1:]:
-            if wormBody['x'] == wormCoords[HEAD]['x'] and wormBody['y'] == wormCoords[HEAD]['y']:
-                time.sleep(1.5)
-                if score > highscore:
-                    highscore = score
-                    if PI:
-                        pickle.dump(highscore, open(
-                            f"{INSTALL_DIR}/hs_snake.p", "wb"))
-                        scroll_text("New Highscore !!!")
-                return  # game over
-
-        # check if worm has eaten an apple
-        if wormCoords[HEAD]['x'] == apple['x'] and wormCoords[HEAD]['y'] == apple['y']:
-            # don't remove worm's tail segment
-            score += 1
-            apple = getRandomLocation(wormCoords)  # set a new apple somewhere
-        else:
-            del wormCoords[-1]  # remove worm's tail segment
-
-        # move the worm by adding a segment in the direction it is moving
-        if direction == UP:
-            if wormCoords[HEAD]['y'] == 0:
-                newHead = {'x': wormCoords[HEAD]['x'], 'y': BOARDHEIGHT-1}
-            else:
-                newHead = {'x': wormCoords[HEAD]['x'],
-                           'y': wormCoords[HEAD]['y'] - 1}
-        elif direction == DOWN:
-            if wormCoords[HEAD]['y'] == BOARDHEIGHT-1:
-                newHead = {'x': wormCoords[HEAD]['x'], 'y': 0}
-            else:
-                newHead = {'x': wormCoords[HEAD]['x'],
-                           'y': wormCoords[HEAD]['y'] + 1}
-        elif direction == LEFT:
-            if wormCoords[HEAD]['x'] == 0:
-                newHead = {'x': BOARDWIDTH - 1, 'y': wormCoords[HEAD]['y']}
-            else:
-                newHead = {'x': wormCoords[HEAD]
-                           ['x'] - 1, 'y': wormCoords[HEAD]['y']}
-        elif direction == RIGHT:
-            if wormCoords[HEAD]['x'] == BOARDWIDTH-1:
-                newHead = {'x': 0, 'y': wormCoords[HEAD]['y']}
-            else:
-                newHead = {'x': wormCoords[HEAD]
-                           ['x'] + 1, 'y': wormCoords[HEAD]['y']}
-        if not PI:
-            checkForQuit()
-        wormCoords.insert(0, newHead)
-        clearScreen()
-        drawWorm(wormCoords)
-        drawApple(apple)
-        scoreText(score)
-        updateScreen()
-        time.sleep(.15)
 
 
 def drawClock(color):
@@ -576,7 +427,8 @@ def drawDarkPixel(x, y, color):
 
     darkcolor = COLORS[color]
     print(darkcolor)
-    darkcolor = [int(darkcolor[0] * 0.05), int(darkcolor[1] * 0.05), int(darkcolor[2] * 0.05)]
+    darkcolor = [int(darkcolor[0] * 0.05), int(darkcolor[1]
+                                               * 0.05), int(darkcolor[2] * 0.05)]
     print(darkcolor)
     if PI:
         try:
@@ -683,33 +535,6 @@ def checkForQuit():
         if event.key == pygame.K_ESCAPE:
             terminate()  # terminate if the KEYUP event was for the Esc key
         pygame.event.post(event)  # put the other KEYUP event objects back
-
-
-# snake subroutines #
-
-
-def getRandomLocation(wormCoords):
-    while True:
-        x = random.randint(0, BOARDWIDTH - 1)
-        y = random.randint(0, BOARDHEIGHT - 1)
-        if {'x': x, 'y': y} in wormCoords:
-            print('no apples on worm')
-        else:
-            break
-    return {'x': x, 'y': y}
-
-
-def drawWorm(wormCoords):
-    for coord in wormCoords:
-        x = coord['x']
-        y = coord['y']
-        drawPixel(x, y, 1)
-
-
-def drawApple(coord):
-    x = coord['x']
-    y = coord['y']
-    drawPixel(x, y, 2)
 
 
 if __name__ == '__main__':
