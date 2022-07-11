@@ -24,12 +24,7 @@ def runTetrisGame():
     # device.contrast(255)
     # device.show()
     board = getBlankBoard()
-    lastMoveDownTime = time.time()
-    lastMoveSidewaysTime = time.time()
     lastFallTime = time.time()
-    movingDown = False  # note: there is no movingUp variable
-    movingLeft = False
-    movingRight = False
     score = 0
     oldscore = -1
     oldpiece = 10
@@ -71,128 +66,47 @@ def runTetrisGame():
 
         pygame.event.pump()
         for event in pygame.event.get():
-            # print("event detected {}".format(event))
-            if event.type == pygame.JOYAXISMOTION:
-                axis = event.axis
-                val = round(event.value)
-                if (axis == 0 and val == 0):
-                    # no motion or down motion
-                    movingLeft = movingRight = False
 
-                if (axis == 1 and val == 0):
-                    movingDown = False
-
-                if ((axis == 0 and val == -1)
+            # D-Pad Movement
+            if event.type == pygame.JOYBUTTONDOWN:
+                print(event.__dict__)
+                if (event.button == pygame.CONTROLLER_BUTTON_DPAD_DOWN
+                        and isValidPosition(board, fallingPiece, adjY=1)):
+                    fallingPiece['y'] += 1
+                # Quick Drop Down
+                elif event.button == pygame.CONTROLLER_BUTTON_DPAD_UP:
+                    i = 0
+                    for i in range(1, main.BOARDHEIGHT):
+                        if not isValidPosition(board, fallingPiece, adjY=i):
+                            break
+                    score += i
+                    # TODO: more digits on numbercounter, more scores
+                    fallingPiece['y'] += i - 1
+                elif (event.button == pygame.CONTROLLER_BUTTON_DPAD_LEFT
                         and isValidPosition(board, fallingPiece, adjX=-1)):
                     fallingPiece['x'] -= 1
-                    movingLeft = True
-                    movingRight = False
-                    lastMoveSidewaysTime = time.time()
-
-                if ((axis == 0 and val == 1)
+                elif (event.button == pygame.CONTROLLER_BUTTON_DPAD_RIGHT
                         and isValidPosition(board, fallingPiece, adjX=1)):
                     fallingPiece['x'] += 1
-                    movingLeft = False
-                    movingRight = True
-                    lastMoveSidewaysTime = time.time()
 
-                if (axis == 1 and val == 1):
-                    movingDown = True
-                    if isValidPosition(board, fallingPiece, adjY=1):
-                        fallingPiece['y'] += 1
-                    lastMoveDownTime = time.time()
-
-                if (axis == 1 and val == -1):
-                    fallingPiece['rotation'] = (
-                        fallingPiece['rotation'] + 1) % len(PIECES[fallingPiece['shape']])
-                    if not isValidPosition(board, fallingPiece):
-                        fallingPiece['rotation'] = (
-                            fallingPiece['rotation'] - 1) % len(PIECES[fallingPiece['shape']])
-
-            if event.type == pygame.KEYDOWN:
-
-                if (event.key == pygame.K_LEFT) and isValidPosition(board, fallingPiece, adjX=-1):
-                    fallingPiece['x'] -= 1
-                    movingLeft = True
-                    movingRight = False
-                    lastMoveSidewaysTime = time.time()
-
-                if (event.key == pygame.K_RIGHT) and isValidPosition(board, fallingPiece, adjX=1):
-                    fallingPiece['x'] += 1
-                    movingLeft = False
-                    movingRight = True
-                    lastMoveSidewaysTime = time.time()
-
-                if (event.key == pygame.K_DOWN):
-                    movingDown = True
-                    if isValidPosition(board, fallingPiece, adjY=1):
-                        fallingPiece['y'] += 1
-                    lastMoveDownTime = time.time()
-
-                if (event.key == pygame.K_4):
-                    fallingPiece['rotation'] = (
-                        fallingPiece['rotation'] + 1) % len(PIECES[fallingPiece['shape']])
-                    if not isValidPosition(board, fallingPiece):
-                        fallingPiece['rotation'] = (
-                            fallingPiece['rotation'] - 1) % len(PIECES[fallingPiece['shape']])
-
-                if (event.key == pygame.K_3):
-                    fallingPiece['rotation'] = (
-                        fallingPiece['rotation'] - 1) % len(PIECES[fallingPiece['shape']])
-                    if not isValidPosition(board, fallingPiece):
-                        fallingPiece['rotation'] = (
-                            fallingPiece['rotation'] + 1) % len(PIECES[fallingPiece['shape']])
-
-                if (event.key == pygame.K_UP):
-                    movingDown = False
-                    movingLeft = False
-                    movingRight = False
-                    for i in range(1, main.BOARDHEIGHT):
-                        if not isValidPosition(board, fallingPiece, adjY=i):
-                            break
-                    score += i
-                    # TODO: more digits on numbercounter, more scores
-                    fallingPiece['y'] += i - 1
-
-            if event.type == pygame.KEYUP:
-                movingDown = False
-                movingLeft = False
-                movingRight = False
-
+            # Buttons
             if event.type == pygame.JOYBUTTONDOWN:
-                # print("Joystick button pressed: {}".format(event.button))
-                if (event.button == main.CONTROLLER['JKEY_A']):
+
+                # Rotate Left
+                if (event.button == main.CONTROLLER['JKEY_A']
+                        or event.button == main.CONTROLLER['JKEY_X']):
                     fallingPiece['rotation'] = (
                         fallingPiece['rotation'] - 1) % len(PIECES[fallingPiece['shape']])
                     if not isValidPosition(board, fallingPiece):
                         fallingPiece['rotation'] = (
                             fallingPiece['rotation'] + 1) % len(PIECES[fallingPiece['shape']])
-                if (event.button == main.CONTROLLER['JKEY_Y']):
-                    movingDown = False
-                    movingLeft = False
-                    movingRight = False
-                    for i in range(1, main.BOARDHEIGHT):
-                        if not isValidPosition(board, fallingPiece, adjY=i):
-                            break
-                    score += i
-                    # TODO: more digits on numbercounter, more scores
-                    fallingPiece['y'] += i - 1
-
-                #  return
-
-        # handle moving the piece because of user input
-        if ((movingLeft or movingRight)
-                and time.time() - lastMoveSidewaysTime > main.MOVESIDEWAYSFREQ):
-            if movingLeft and isValidPosition(board, fallingPiece, adjX=-1):
-                fallingPiece['x'] -= 1
-            elif movingRight and isValidPosition(board, fallingPiece, adjX=1):
-                fallingPiece['x'] += 1
-            lastMoveSidewaysTime = time.time()
-
-        if (movingDown and time.time() - lastMoveDownTime > main.MOVEDOWNFREQ
-                and isValidPosition(board, fallingPiece, adjY=1)):
-            fallingPiece['y'] += 1
-            lastMoveDownTime = time.time()
+                if (event.button == main.CONTROLLER['JKEY_B']
+                        or event.button == main.CONTROLLER['JKEY_Y']):
+                    fallingPiece['rotation'] = (
+                        fallingPiece['rotation'] + 1) % len(PIECES[fallingPiece['shape']])
+                    if not isValidPosition(board, fallingPiece):
+                        fallingPiece['rotation'] = (
+                            fallingPiece['rotation'] - 1) % len(PIECES[fallingPiece['shape']])
 
         # let the piece fall if it is time to fall
         if time.time() - lastFallTime > fallFreq:
@@ -237,11 +151,11 @@ def runTetrisGame():
 def calculateLevelAndFallFreq(lines):
     # Based on the score, return the level the player is on and
     # how many seconds pass until a falling piece falls one space.
-    level = int(lines / 10) + 1
+    level = int(lines / 4) + 1
     # limit level to 10
     if level > 10:
         level = 10
-    fallFreq = FALLING_SPEED - (level * 0.05)
+    fallFreq = FALLING_SPEED - (level * 0.06)
     if fallFreq <= 0.05:
         fallFreq = 0.05
     return level, fallFreq
