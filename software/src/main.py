@@ -427,8 +427,8 @@ def drawDarkPixel(x, y, color):
 
     darkcolor = COLORS[color]
     print(darkcolor)
-    darkcolor = [int(darkcolor[0] * 0.05), int(darkcolor[1]
-                                               * 0.05), int(darkcolor[2] * 0.05)]
+    darkcolor = [int(darkcolor[0] * 0.1), int(darkcolor[1]
+                                               * 0.1), int(darkcolor[2] * 0.1)]
     print(darkcolor)
     if PI:
         try:
