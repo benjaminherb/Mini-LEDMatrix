@@ -36,7 +36,15 @@ def runSnakeGame():
     else:
         highscore = 0
     if PI:
-        main.scroll_text(f"Snake Highscore: {str(highscore)}")
+        # main.scroll_text(f"Snake Highscore: {str(highscore)}")
+        main.matrix_text("SNAKE", (6, 0))
+        time.sleep(0.8)
+        main.matrix_image("highscore")
+        time.sleep(0.8)
+        main.matrix_text(str(highscore).rjust(3, '0'), (10, 0))
+        time.sleep(1)
+        main.matrix_clear()
+        time.sleep(1)
 
     # Start the apple in a random place.
     apple = getRandomLocation(wormCoords)
@@ -160,8 +168,16 @@ def drawApple(coord):
 
 
 def pause_game():
-    main.scroll_text("PAUSE")
+    main.matrix_text("PAUSE")
+    counter = 0
     while True:
+        # Blinking "PAUSE"
+        if counter == 15:
+            main.matrix_clear()
+        if counter == 30:
+            main.matrix_text("PAUSE")
+            counter = 0
+
         pygame.event.pump()
         for event in pygame.event.get():
             action = main.get_action(event)
@@ -171,3 +187,5 @@ def pause_game():
             # End Game
             elif action == 'SELECT':
                 return True
+        time.sleep(0.1)
+        counter += 1

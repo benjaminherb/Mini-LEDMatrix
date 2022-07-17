@@ -11,8 +11,9 @@ import pygame
 import time
 import os
 import subprocess
-from PIL import Image
+from PIL import Image, ImageFont, ImageDraw
 from pygame.display import update
+from pygame.draw import circle
 
 from . import PI, INSTALL_DIR, RES_DIR
 from .tetris import runTetrisGame
@@ -45,6 +46,9 @@ BOARDWIDTH = PIXEL_X
 BOARDHEIGHT = PIXEL_Y
 BLANK = '.'
 LED_BRIGHTNESS = 1
+
+# Small Font used for the 8x8 dot matrix display
+PIXELFONT = ImageFont.truetype(f"{RES_DIR}/font/arriva-7x3.ttf", 8)
 
 
 #               R    G    B
@@ -209,8 +213,6 @@ def main():
     clearScreen()
 
     drawClock(1)
-    if PI:
-        scroll_text("Let's play")
 
     # Check for joystick in the first loop
     joystick_cnt = 45
@@ -232,7 +234,7 @@ def main():
         # check if joystick is still connected
         if PI:
             if joystick_cnt >= 45:
-                print("CHECK FOR JOYSTICK")
+                # print("CHECK FOR JOYSTICK")
                 joystick = check_joystick()
                 joystick_cnt = 0
             else:
@@ -245,18 +247,36 @@ def main():
             action = get_action(event)
 
             if action == 'DOWN':
+                joystick_cnt = - 50
                 menu_selected = (menu_selected + 1) % 3
             elif action == 'UP':
+                joystick_cnt = - 50
                 menu_selected = (menu_selected - 1) % 3
             elif action == 'START':
                 if menu_selected == 0:
+                    print("Starting Tetris")
                     runTetrisGame()
+                    joystick = check_joystick()
+                    transition('circle', 26, 0.6, True)
+                    transition('menu', 5, 0.05)
                 if menu_selected == 1:
+                    print("Starting Snake")
                     runSnakeGame()
+                    joystick = check_joystick()
+                    transition('circle', 26, 0.6, True)
+                    transition('menu', 5, 0.05)
                 if menu_selected == 2:
+                    transition('menu', 5, 0.05, True)
+                    print("Starting Clock")
                     drawClock(0)
+                    joystick = check_joystick()
+
+                # Remove any scores left over after a game
+                matrix_clear()
+
             elif action == 'SELECT':
                 shutdownScreen()
+                matrix_clear()
 
             if event.type == pygame.QUIT:  # get all the QUIT events
                 terminate()  # terminate if any QUIT events are present
@@ -285,6 +305,8 @@ def drawClock(color):
                 # print("exiting clock")
                 clearScreen()
                 updateScreen()
+                transition('circle', 26, 0.6)
+                transition('menu', 5, 0.05)
                 return
             if action in ['A', 'B', 'X', 'Y']:
                 color = color + 1
@@ -296,7 +318,7 @@ def drawClock(color):
 
         # check if joystick is still connected
         if PI:
-            if joystick_cnt == 25:
+            if joystick_cnt == 15:
                 joystick_cnt = 0
                 joystick = check_joystick()
             else:
@@ -326,15 +348,24 @@ def shutdownScreen():
         DEVICE.show()
         drawImage(f'{RES_DIR}/shutdown.bmp')
         updateScreen()
-        scroll_text("Press Select to shutdown!")
     else:
         drawImage(f'{RES_DIR}/shutdown.bmp')
         updateScreen()
 
+    matrix_image("select_to")
+    counter = 0
     while True:
+
+        # Blinking "PAUSE"
+        if counter == 8:
+            matrix_image("shutdown")
+        if counter == 16:
+            matrix_image("select_to")
+            counter = 0
 
         pygame.event.pump()
         for event in pygame.event.get():  # User did something
+
             action = get_action(event)
             if action == 'START':
                 clearScreen()
@@ -346,7 +377,7 @@ def shutdownScreen():
                 else:
                     clearScreen()
                     updateScreen()
-                    scroll_text("Shutdown...")
+                    matrix_image("shutdown")
                     subprocess.Popen(['shutdown', '-h', 'now'])
                     # call("sudo nohup shutdown -h now", shell=True)
                     terminate()
@@ -355,7 +386,25 @@ def shutdownScreen():
                 terminate()  # terminate if any QUIT events are present
 
         updateScreen()
+        counter += 1
         time.sleep(.2)
+
+
+def transition(name, image_count, animation_time, reverse=False):
+
+    print(f"ANIMATION: {name}")
+
+    if animation_time <= 0:
+        sleep_time = 0.02
+    else:
+        sleep_time = animation_time / image_count
+    for i in range(0, image_count - 1):
+        if reverse:
+            drawImage(f'{RES_DIR}/animations/{name}/{image_count-1-i}.bmp')
+        else:
+            drawImage(f'{RES_DIR}/animations/{name}/{i}.bmp')
+        updateScreen()
+        time.sleep(sleep_time)
 
 
 def drawImage(filename):
@@ -376,6 +425,22 @@ def drawHalfImage(filename, offset):
             drawPixelRgb(col, row+offset, r, g, b)
 
 # drawing #
+
+
+def matrix_text(text, offset=(0, 0)):
+    with canvas(DEVICE) as draw:
+        draw.text(offset, text, font=PIXELFONT, fill="white")
+
+
+def matrix_image(image):
+    bitmap = Image.open(f"{RES_DIR}/dotmatrix/{image}.bmp")
+    with canvas(DEVICE)as draw:
+        draw.bitmap((0, 0), bitmap, fill='white')
+
+
+def matrix_clear():
+    with canvas(DEVICE) as draw:
+        draw.rectangle((0, 0, 32, 8))
 
 
 def clearScreen():
@@ -456,6 +521,7 @@ def draw_bin_number_main_menu(bin_number, offsetx, offsety, color):
         for y in range(0, 4):
             if bin_number[x][y] == 1:
                 drawPixel(offsetx+x, offsety+y, color)
+
 
 def drawnumberMAX7219(number, offsetx, offsety, draw1):
     for x in range(0, 3):

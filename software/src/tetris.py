@@ -7,7 +7,7 @@ from luma.core.render import canvas
 
 from . import main
 from .templates_tetris import PIECES
-from . import INSTALL_DIR, PI
+from . import INSTALL_DIR, PI, RES_DIR
 
 PIECES_ORDER = {'S': 0, 'Z': 1, 'I': 2, 'J': 3, 'L': 4, 'O': 5, 'T': 6}
 SCORES = (0, 40, 100, 300, 1200)
@@ -38,7 +38,15 @@ def runTetrisGame():
     else:
         highscore = 0
     if PI:
-        main.scroll_text(f"Tetris Highscore: {str(highscore)}")
+        main.matrix_image('tetris')
+        time.sleep(0.8)
+        main.matrix_image('highscore')
+        time.sleep(0.8)
+        # score as 6 digit value
+        main.matrix_text(str(highscore).rjust(6, '0'), (4, 0))
+        time.sleep(2)
+        main.matrix_clear()
+        time.sleep(0.8)
 
     fallingPiece = getNewPiece()
     nextPiece = getNewPiece()
@@ -113,7 +121,8 @@ def runTetrisGame():
                     return
                 else:
                     # Redraw scoreboard and continue game
-                    scoreTetris(score, level, PIECES_ORDER.get(nextPiece['shape']))
+                    scoreTetris(score, level, PIECES_ORDER.get(
+                        nextPiece['shape']))
 
         # let the piece fall if it is time to fall
         if quickdrop or time.time() - lastFallTime > fallFreq:
@@ -290,11 +299,11 @@ def scoreTetris(score, level, nextpiece):
         # one point per level
         with canvas(main.DEVICE) as draw1:
             for i in range(0, level):
-                main.drawScorePixel(i*2, 7, 1, draw1)
+                main.drawScorePixel((i*2)+1, 7, 1, draw1)
 
             # score as 6 digit value
             for i in range(0, 6):
-                main.drawnumberMAX7219(_score % 10, i*4, 0, draw1)
+                main.drawnumberMAX7219(_score % 10, (i*4)+1, 0, draw1)
                 _score //= 10
 
             # draw next piece
@@ -305,8 +314,16 @@ def scoreTetris(score, level, nextpiece):
 
 
 def pause_game():
-    main.scroll_text("PAUSE")
+    main.matrix_text("PAUSE")
+    counter = 0
     while True:
+        # Blinking "PAUSE"
+        if counter == 15:
+            main.matrix_clear()
+        if counter == 30:
+            main.matrix_text("PAUSE")
+            counter = 0
+
         pygame.event.pump()
         for event in pygame.event.get():
             action = main.get_action(event)
@@ -316,3 +333,5 @@ def pause_game():
             # End Game
             elif action == 'SELECT':
                 return True
+        time.sleep(0.1)
+        counter += 1
