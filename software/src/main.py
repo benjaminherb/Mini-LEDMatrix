@@ -12,10 +12,12 @@ import time
 import os
 import subprocess
 from PIL import Image
+from pygame.display import update
 
 from . import PI, INSTALL_DIR, RES_DIR
 from .tetris import runTetrisGame
 from .snake import runSnakeGame
+from . import clock
 
 # If Pi = False the script runs in simulation mode using pygame lib
 if PI:
@@ -67,13 +69,14 @@ MAGENTA = (255,   0, 255)
 DARKMAGENTA = (128,   0, 128)
 ORANGE = (255, 100,   0)
 DARKORANGE = (128, 50,   0)
+LIGHTGREY = (128, 128, 128)
 
 
 BORDERCOLOR = BLUE
 BGCOLOR = BLACK
 TEXTCOLOR = WHITE
 TEXTSHADOWCOLOR = GRAY
-COLORS = (BLUE, GREEN, RED, YELLOW, CYAN, MAGENTA, ORANGE)
+COLORS = (BLUE, GREEN, RED, YELLOW, CYAN, MAGENTA, ORANGE, LIGHTGREY)
 DARKCOLORS = (DARKBLUE, DARKGREEN, DARKRED, DARKYELLOW,
               DARKCYAN, DARKMAGENTA, DARKORANGE)
 LIGHTCOLORS = (LIGHTBLUE, LIGHTGREEN, LIGHTRED, LIGHTYELLOW)
@@ -106,6 +109,7 @@ theTetrisFont = [
 
 DEVICE = None
 PIXELS = None
+
 if PI:
     serial = spi(port=0, device=0, gpio=noop())
     DEVICE = max7219(serial, cascaded=4,
@@ -125,6 +129,7 @@ QKEYUP = 1
 
 CONTROLLER = {}
 if PI:
+    # 8-Bitdo Controller Input Keycodes
     CONTROLLER = {
         11: 'UP',
         12: 'DOWN',
@@ -161,7 +166,6 @@ mask = bytearray([1, 2, 4, 8, 16, 32, 64, 128])
 
 
 def main():
-    print("Starting MAIN")
     global FPSCLOCK, DISPLAYSURF, BASICFONT, BIGFONT
     global a1_counter, RUNNING
     a1_counter = 0
@@ -178,12 +182,14 @@ def main():
         DISPLAYSURF.fill(BGCOLOR)
         pygame.display.update()
         drawImage(f'{RES_DIR}/pi.bmp')
+        updateScreen()
         time.sleep(2)
     else:
         print("PI SETUP")
         DEVICE.contrast(200)
         pygame.init()
         drawImage(f'{RES_DIR}/pi.bmp')
+        updateScreen()
         pygame.joystick.init()
         joystick_detected = False
         while not joystick_detected:
@@ -214,6 +220,11 @@ def main():
         clearScreen()
         # drawSymbols()
         drawImage(f'{RES_DIR}/menu{menu_selected}.bmp')
+        # draw color if clock menu is selected
+        if menu_selected == 2:
+            clock.binary_clock_overlay(True)
+        else:
+            clock.binary_clock_overlay()
         updateScreen()
         if not PI:
             checkForQuit()
@@ -232,7 +243,6 @@ def main():
 
             # Translate event to "action" string based on Controller / Keyboard
             action = get_action(event)
-            print(action)
 
             if action == 'DOWN':
                 menu_selected = (menu_selected + 1) % 3
@@ -250,7 +260,6 @@ def main():
 
             if event.type == pygame.QUIT:  # get all the QUIT events
                 terminate()  # terminate if any QUIT events are present
-
         time.sleep(.1)
 
     terminate()
@@ -316,9 +325,11 @@ def shutdownScreen():
         DEVICE.clear()
         DEVICE.show()
         drawImage(f'{RES_DIR}/shutdown.bmp')
+        updateScreen()
         scroll_text("Press Select to shutdown!")
     else:
         drawImage(f'{RES_DIR}/shutdown.bmp')
+        updateScreen()
 
     while True:
 
@@ -353,7 +364,6 @@ def drawImage(filename):
         for col in range(0, BOARDWIDTH):
             r, g, b = im.getpixel((col, row))
             drawPixelRgb(col, row, r, g, b)
-    updateScreen()
 
 
 def drawHalfImage(filename, offset):
@@ -392,7 +402,8 @@ def drawPixel(x, y, color):
                     PIXELS[x*PIXEL_Y+y] = COLORS[color]
                 else:
                     PIXELS[x*PIXEL_Y+(PIXEL_Y-1-y)] = COLORS[color]
-        except:
+        except Exception as e:
+            print(e)
             print(str(x) + ' --- ' + str(y))
     else:
         pygame.draw.rect(
@@ -405,10 +416,8 @@ def drawDarkPixel(x, y, color):
         return
 
     darkcolor = COLORS[color]
-    print(darkcolor)
     darkcolor = [int(darkcolor[0] * 0.1), int(darkcolor[1]
                                               * 0.1), int(darkcolor[2] * 0.1)]
-    print(darkcolor)
     if PI:
         try:
             if (x >= 0 and y >= 0 and color >= 0):
@@ -441,6 +450,12 @@ def drawnumber(number, offsetx, offsety, color):
             if clock_font[3*number + x] & mask[y]:
                 drawPixel(offsetx+x, offsety+y, color)
 
+
+def draw_bin_number_main_menu(bin_number, offsetx, offsety, color):
+    for x in range(0, 2):
+        for y in range(0, 4):
+            if bin_number[x][y] == 1:
+                drawPixel(offsetx+x, offsety+y, color)
 
 def drawnumberMAX7219(number, offsetx, offsety, draw1):
     for x in range(0, 3):

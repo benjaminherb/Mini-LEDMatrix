@@ -69,9 +69,9 @@ def runTetrisGame():
 
         pygame.event.pump()
         for event in pygame.event.get():
+            action = main.get_action(event)
 
             # D-Pad Movement
-            action = main.get_action(event)
             if (action == 'DOWN'
                     and isValidPosition(board, fallingPiece, adjY=1)):
                 fallingPiece['y'] += 1
@@ -111,6 +111,9 @@ def runTetrisGame():
                 exit_game = pause_game()
                 if exit_game:
                     return
+                else:
+                    # Redraw scoreboard and continue game
+                    scoreTetris(score, level, PIECES_ORDER.get(nextPiece['shape']))
 
         # let the piece fall if it is time to fall
         if quickdrop or time.time() - lastFallTime > fallFreq:
