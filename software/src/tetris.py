@@ -71,51 +71,46 @@ def runTetrisGame():
         for event in pygame.event.get():
 
             # D-Pad Movement
-            if event.type == pygame.JOYBUTTONDOWN:
-                if (event.button == pygame.CONTROLLER_BUTTON_DPAD_DOWN
-                        and isValidPosition(board, fallingPiece, adjY=1)):
-                    fallingPiece['y'] += 1
-                # Quick Drop Down
-                elif event.button == pygame.CONTROLLER_BUTTON_DPAD_UP:
-                    i = 0
-                    for i in range(1, main.BOARDHEIGHT):
-                        if not isValidPosition(board, fallingPiece, adjY=i):
-                            break
-                    score += i
-                    fallingPiece['y'] += i - 1
-                    # stop event loop to not move after a quick drop
-                    quickdrop = True
-                elif (event.button == pygame.CONTROLLER_BUTTON_DPAD_LEFT
-                        and isValidPosition(board, fallingPiece, adjX=-1)):
-                    fallingPiece['x'] -= 1
-                elif (event.button == pygame.CONTROLLER_BUTTON_DPAD_RIGHT
-                        and isValidPosition(board, fallingPiece, adjX=1)):
-                    fallingPiece['x'] += 1
+            action = main.get_action(event)
+            if (action == 'DOWN'
+                    and isValidPosition(board, fallingPiece, adjY=1)):
+                fallingPiece['y'] += 1
+            # Quick Drop Down
+            elif action == 'UP':
+                i = 0
+                for i in range(1, main.BOARDHEIGHT):
+                    if not isValidPosition(board, fallingPiece, adjY=i):
+                        break
+                score += i
+                fallingPiece['y'] += i - 1
+                # stop event loop to not move after a quick drop
+                quickdrop = True
+            elif (action == 'LEFT'
+                    and isValidPosition(board, fallingPiece, adjX=-1)):
+                fallingPiece['x'] -= 1
+            elif (action == 'RIGHT'
+                    and isValidPosition(board, fallingPiece, adjX=1)):
+                fallingPiece['x'] += 1
 
-            # Buttons
-            if event.type == pygame.JOYBUTTONDOWN:
-
-                # Rotate Left
-                if (event.button == main.CONTROLLER['JKEY_A']
-                        or event.button == main.CONTROLLER['JKEY_X']):
-                    fallingPiece['rotation'] = (
-                        fallingPiece['rotation'] - 1) % len(PIECES[fallingPiece['shape']])
-                    if not isValidPosition(board, fallingPiece):
-                        fallingPiece['rotation'] = (
-                            fallingPiece['rotation'] + 1) % len(PIECES[fallingPiece['shape']])
-                # Rotate Right
-                if (event.button == main.CONTROLLER['JKEY_B']
-                        or event.button == main.CONTROLLER['JKEY_Y']):
+            # Rotate Left
+            if action in ['A', 'X']:
+                fallingPiece['rotation'] = (
+                    fallingPiece['rotation'] - 1) % len(PIECES[fallingPiece['shape']])
+                if not isValidPosition(board, fallingPiece):
                     fallingPiece['rotation'] = (
                         fallingPiece['rotation'] + 1) % len(PIECES[fallingPiece['shape']])
-                    if not isValidPosition(board, fallingPiece):
-                        fallingPiece['rotation'] = (
-                            fallingPiece['rotation'] - 1) % len(PIECES[fallingPiece['shape']])
-                # Pause screen (with option to exit)
-                if event.button == main.CONTROLLER['JKEY_START']:
-                    exit_game = pause_game()
-                    if exit_game:
-                        return
+            # Rotate Right
+            if action in ['B', 'Y']:
+                fallingPiece['rotation'] = (
+                    fallingPiece['rotation'] + 1) % len(PIECES[fallingPiece['shape']])
+                if not isValidPosition(board, fallingPiece):
+                    fallingPiece['rotation'] = (
+                        fallingPiece['rotation'] - 1) % len(PIECES[fallingPiece['shape']])
+            # Pause screen (with option to exit)
+            if action == 'START':
+                exit_game = pause_game()
+                if exit_game:
+                    return
 
         # let the piece fall if it is time to fall
         if quickdrop or time.time() - lastFallTime > fallFreq:
@@ -311,10 +306,10 @@ def pause_game():
     while True:
         pygame.event.pump()
         for event in pygame.event.get():
-            if event.type == pygame.JOYBUTTONDOWN:
-                # Keep Playing
-                if event.button == main.CONTROLLER['JKEY_START']:
-                    return False
-                # End Game
-                elif event.button == main.CONTROLLER['JKEY_SEL']:
-                    return True
+            action = main.get_action(event)
+            # Keep Playing
+            if action == 'START':
+                return False
+            # End Game
+            elif action == 'SELECT':
+                return True

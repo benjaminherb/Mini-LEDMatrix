@@ -45,23 +45,21 @@ def runSnakeGame():
         olddirection = direction
         pygame.event.pump()
         for event in pygame.event.get():
-            if event.type == pygame.JOYBUTTONDOWN:
-                if (olddirection == direction):   # only one direction change per step
-                    if event.button == pygame.CONTROLLER_BUTTON_DPAD_LEFT:
-                        if direction != RIGHT:
-                            direction = LEFT
-                    if event.button == pygame.CONTROLLER_BUTTON_DPAD_RIGHT:
-                        if direction != LEFT:
-                            direction = RIGHT
-                    if event.button == pygame.CONTROLLER_BUTTON_DPAD_DOWN:
-                        if direction != UP:
-                            direction = DOWN
-                    if event.button == pygame.CONTROLLER_BUTTON_DPAD_UP:
-                        if direction != DOWN:
-                            direction = UP
-
-            if event.type == pygame.JOYBUTTONDOWN:
-                if event.button == main.CONTROLLER['JKEY_START']:
+            action = main.get_action(event)
+            if (olddirection == direction):   # only one direction change per step
+                if action == 'LEFT':
+                    if direction != RIGHT:
+                        direction = LEFT
+                if action == 'RIGHT':
+                    if direction != LEFT:
+                        direction = RIGHT
+                if action == 'DOWN':
+                    if direction != UP:
+                        direction = DOWN
+                if action == 'UP':
+                    if direction != DOWN:
+                        direction = UP
+                if action == 'START':
                     exit_game = pause_game()
                     if exit_game:
                         return
@@ -166,10 +164,10 @@ def pause_game():
     while True:
         pygame.event.pump()
         for event in pygame.event.get():
-            if event.type == pygame.JOYBUTTONDOWN:
-                # Keep Playing
-                if event.button == main.CONTROLLER['JKEY_START']:
-                    return False
-                # End Game
-                elif event.button == main.CONTROLLER['JKEY_SEL']:
-                    return True
+            action = main.get_action(event)
+            # Keep Playing
+            if action == 'START':
+                return False
+            # End Game
+            elif action == 'SELECT':
+                return True

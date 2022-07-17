@@ -42,7 +42,7 @@ WINDOWHEIGHT = BOXSIZE * PIXEL_Y
 BOARDWIDTH = PIXEL_X
 BOARDHEIGHT = PIXEL_Y
 BLANK = '.'
-LED_BRIGHTNESS = 0.6
+LED_BRIGHTNESS = 1
 
 
 #               R    G    B
@@ -123,35 +123,49 @@ if PI:
 QKEYDOWN = 0
 QKEYUP = 1
 
-CONTROLLER = {
-    'JKEY_X': 3,
-    'JKEY_Y': 2,
-    'JKEY_A': 1,
-    'JKEY_B': 0,
-    'JKEY_R': 10,
-    'JKEY_L': 9,
-    'JKEY_SEL': 4,
-    'JKEY_START': 6,
-}
+CONTROLLER = {}
+if PI:
+    CONTROLLER = {
+        11: 'UP',
+        12: 'DOWN',
+        13: 'LEFT',
+        14: 'RIGHT',
+        3: 'X',
+        2: 'Y',
+        1: 'A',
+        0: 'B',
+        4: 'SELECT',
+        6: 'START',
+        # 10: 'R',
+        # 9: 'L',
+    }
 
-mykeys = {
-    pygame.K_1: CONTROLLER['JKEY_A'],
-    pygame.K_2: CONTROLLER['JKEY_B'],
-    pygame.K_3: CONTROLLER['JKEY_Y'],
-    pygame.K_4: CONTROLLER['JKEY_X'],
-    pygame.K_x: CONTROLLER['JKEY_SEL'],
-    pygame.K_s: CONTROLLER['JKEY_START'],
-}
+else:
+    # Keyboard Controlls based on scancode
+    # Arrow Keys + 1234 (ABXY) + <ENTER> (Start) + <RETURN> (Select)
+    CONTROLLER = {
+        82: 'UP',
+        81: 'DOWN',
+        80: 'LEFT',
+        79: 'RIGHT',
+        30: 'A',
+        31: 'B',
+        32: 'X',
+        33: 'Y',
+        40: 'START',
+        42: 'SELECT',
+    }
+
 
 mask = bytearray([1, 2, 4, 8, 16, 32, 64, 128])
 
 
 def main():
+    print("Starting MAIN")
     global FPSCLOCK, DISPLAYSURF, BASICFONT, BIGFONT
     global a1_counter, RUNNING
     a1_counter = 0
     RUNNING = True
-    joystick_detected = False
     joystick_cnt = 0
 
     if not PI:
@@ -166,10 +180,12 @@ def main():
         drawImage(f'{RES_DIR}/pi.bmp')
         time.sleep(2)
     else:
+        print("PI SETUP")
         DEVICE.contrast(200)
         pygame.init()
         drawImage(f'{RES_DIR}/pi.bmp')
         pygame.joystick.init()
+        joystick_detected = False
         while not joystick_detected:
             # scroll_text("Waiting for controller...")
             pygame.joystick.quit()
@@ -178,7 +194,7 @@ def main():
                 joystick = pygame.joystick.Joystick(
                     0)  # create a joystick instance
                 joystick.init()  # init instance
-                # print("Initialized joystick: {}".format(joystick.get_name()))
+                print("Initialized joystick: {}".format(joystick.get_name()))
                 joystick_detected = True
             except pygame.error:
                 print("no joystick found.")
@@ -190,6 +206,8 @@ def main():
     if PI:
         scroll_text("Let's play")
 
+    # Check for joystick in the first loop
+    joystick_cnt = 45
     menu_selected = 0
     while True:
         # select one of the three menu entries (Tetris, Snake, Clock)
@@ -202,39 +220,34 @@ def main():
 
         # check if joystick is still connected
         if PI:
-            if joystick_cnt == 50:
+            if joystick_cnt >= 45:
+                print("CHECK FOR JOYSTICK")
+                joystick = check_joystick()
                 joystick_cnt = 0
-                pygame.joystick.quit()
-                pygame.joystick.init()
-                try:
-                    # create a joystick instance
-                    joystick = pygame.joystick.Joystick(0)
-                    joystick.init()  # init instance
-                    # print("Initialized joystick: {}".format(joystick.get_name()))
-                    joystick_detected = True
-                except pygame.error:
-                    print("no joystick found.")
-                    joystick_detected = False
             else:
                 joystick_cnt += 1
 
         pygame.event.pump()
         for event in pygame.event.get():
-            # print("event detected {}".format(event))
-            if event.type == pygame.JOYBUTTONDOWN:
-                print(event.button)
-                print(pygame.CONTROLLER_BUTTON_DPAD_DOWN)
-                if (event.button == pygame.CONTROLLER_BUTTON_DPAD_DOWN):
-                    menu_selected = (menu_selected + 1) % 3
-                if (event.button == pygame.CONTROLLER_BUTTON_DPAD_UP):
-                    menu_selected = (menu_selected - 1) % 3
-                if (event.button == pygame.CONTROLLER_BUTTON_START):
-                    if menu_selected == 0:
-                        runTetrisGame()
-                    if menu_selected == 1:
-                        runSnakeGame()
-                    if menu_selected == 2:
-                        drawClock(0)
+
+            # Translate event to "action" string based on Controller / Keyboard
+            action = get_action(event)
+            print(action)
+
+            if action == 'DOWN':
+                menu_selected = (menu_selected + 1) % 3
+            elif action == 'UP':
+                menu_selected = (menu_selected - 1) % 3
+            elif action == 'START':
+                if menu_selected == 0:
+                    runTetrisGame()
+                if menu_selected == 1:
+                    runSnakeGame()
+                if menu_selected == 2:
+                    drawClock(0)
+            elif action == 'SELECT':
+                shutdownScreen()
+
             if event.type == pygame.QUIT:  # get all the QUIT events
                 terminate()  # terminate if any QUIT events are present
 
@@ -258,29 +271,16 @@ def drawClock(color):
 
         pygame.event.pump()
         for event in pygame.event.get():  # User did something
-            # print("event detected {}".format(event))
-            # Possible joystick actions: JOYAXISMOTION JOYBALLMOTION JOYBUTTONDOWN JOYBUTTONUP JOYHATMOTION
-            if event.type == pygame.JOYBUTTONDOWN or event.type == pygame.KEYDOWN:
-                if event.type == pygame.JOYBUTTONDOWN:
-                    myevent = event.button
-                else:
-                    if event.key in mykeys:
-                        myevent = mykeys[event.key]
-                    else:
-                        myevent = -1
-                # print("Joystick button pressed: {}".format(event.button))
-                if (myevent == CONTROLLER['JKEY_START']):
-                    # print("exiting clock")
-                    clearScreen()
-                    updateScreen()
-                    return
-                if (myevent == CONTROLLER['JKEY_A']
-                        or myevent == CONTROLLER['JKEY_B']
-                        or myevent == CONTROLLER['JKEY_X']
-                        or myevent == CONTROLLER['JKEY_Y']):
-                    color = color + 1
-                    if (color > (len(COLORS) - 1)):
-                        color = 0
+            action = get_action(event)
+            if action == 'START':
+                # print("exiting clock")
+                clearScreen()
+                updateScreen()
+                return
+            if action in ['A', 'B', 'X', 'Y']:
+                color = color + 1
+                if (color > (len(COLORS) - 1)):
+                    color = 0
 
             if event.type == pygame.QUIT:  # get all the QUIT events
                 terminate()  # terminate if any QUIT events are present
@@ -289,17 +289,7 @@ def drawClock(color):
         if PI:
             if joystick_cnt == 25:
                 joystick_cnt = 0
-                pygame.joystick.quit()
-                pygame.joystick.init()
-                try:
-                    joystick = pygame.joystick.Joystick(
-                        0)  # create a joystick instance
-                    joystick.init()  # init instance
-                    # print("Initialized joystick: {}".format(joystick.get_name()))
-                    # joystick_detected = True
-                except pygame.error:
-                    print("no joystick found.")
-                    # joystick_detected = False
+                joystick = check_joystick()
             else:
                 joystick_cnt += 1
 
@@ -334,33 +324,22 @@ def shutdownScreen():
 
         pygame.event.pump()
         for event in pygame.event.get():  # User did something
-            # print("event detected {}".format(event))
-            # Possible joystick actions:
-            # JOYAXISMOTION JOYBALLMOTION JOYBUTTONDOWN JOYBUTTONUP JOYHATMOTION
-            if event.type == pygame.JOYBUTTONDOWN or event.type == pygame.KEYDOWN:
-                if event.type == pygame.JOYBUTTONDOWN:
-                    myevent = event.button
+            action = get_action(event)
+            if action == 'START':
+                clearScreen()
+                updateScreen()
+                return
+            elif action == 'SELECT':
+                if not PI:
+                    terminate()
                 else:
-                    if event.key in mykeys:
-                        myevent = mykeys[event.key]
-                    else:
-                        myevent = -1
-                # print("Joystick button pressed: {}".format(event.button))
-                if (myevent != CONTROLLER['JKEY_SEL']):
-                    # print("exiting clock")
                     clearScreen()
                     updateScreen()
-                    return
-                else:
-                    if not PI:
-                        terminate()
-                    else:
-                        clearScreen()
-                        updateScreen()
-                        scroll_text("Shutdown...")
-                        subprocess.Popen(['shutdown', '-h', 'now'])
-                        # call("sudo nohup shutdown -h now", shell=True)
-                        terminate()
+                    scroll_text("Shutdown...")
+                    subprocess.Popen(['shutdown', '-h', 'now'])
+                    # call("sudo nohup shutdown -h now", shell=True)
+                    terminate()
+
             if event.type == pygame.QUIT:  # get all the QUIT events
                 terminate()  # terminate if any QUIT events are present
 
@@ -428,7 +407,7 @@ def drawDarkPixel(x, y, color):
     darkcolor = COLORS[color]
     print(darkcolor)
     darkcolor = [int(darkcolor[0] * 0.1), int(darkcolor[1]
-                                               * 0.1), int(darkcolor[2] * 0.1)]
+                                              * 0.1), int(darkcolor[2] * 0.1)]
     print(darkcolor)
     if PI:
         try:
@@ -520,6 +499,29 @@ def scoreText(score):
         DISPLAYSURF.blit(titleSurf, titleRect)
 
 # program flow #
+
+
+def get_action(event):
+    if event.type == pygame.JOYBUTTONDOWN and event.button in CONTROLLER:
+        return CONTROLLER[event.button]
+    elif event.type == pygame.KEYDOWN and event.scancode in CONTROLLER:
+        return CONTROLLER[event.scancode]
+    else:
+        return ""
+
+
+def check_joystick():
+    pygame.joystick.quit()
+    pygame.joystick.init()
+    try:
+        # create a joystick instance
+        joystick = pygame.joystick.Joystick(0)
+        joystick.init()  # init instance
+        # print("Initialized joystick: {}".format(joystick.get_name()))
+        return joystick
+    except pygame.error:
+        print("no joystick found.")
+        return None
 
 
 def terminate():
