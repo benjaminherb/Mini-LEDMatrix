@@ -1,5 +1,7 @@
 Fork of https://github.com/makeTVee/ledmatrix
 
+Added Lasercutting Files for a Version with 60LED/m instead of the original 30LED/m
+
 # LED Matrix Project
 
 Hackaday.io:
